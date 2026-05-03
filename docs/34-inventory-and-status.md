@@ -3,7 +3,8 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 12 — `feat/portal-ui-and-shared-link`).
+> Last reviewed: 2026-05-03 (after PR 13/14/15 — `feat/v1-hardening`).
+> Engine ships as **v1.0** — see CHANGELOG.md.
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
