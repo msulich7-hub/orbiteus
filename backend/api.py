@@ -204,6 +204,84 @@ async def _reload_rbac_cache() -> None:
         reload_access_cache(access_rows, rule_rows)
 
 
+def _seed_auto_actions() -> None:
+    """Auto-register `<model>.list` / `<model>.create` actions for every
+    model exposed via `auto_router._model_registry`.
+
+    These actions populate the Cmd+K Command Palette out of the box, so a
+    new business module that adds models doesn't have to also write an
+    `actions.py`. Module-defined actions take precedence — only ids that
+    aren't already registered are added (so the curated CRM keywords in
+    `modules/crm/actions.py` keep their hand-tuned labels and synonyms).
+    """
+    from orbiteus_core.ai.action import Action, ActionCategory
+    from orbiteus_core.ai.registry import action_registry
+    from orbiteus_core.auto_router import _model_registry
+
+    existing: set[str] = {a.id for a in action_registry.get_all()}
+    auto_count = 0
+
+    for mod_name in registry.loaded_modules:
+        try:
+            desc = registry.get_module(mod_name)
+        except Exception:
+            continue
+
+        for model_name in desc.manifest.get("models", []):
+            if model_name not in _model_registry:
+                continue
+
+            # `crm.person` → segment `person`; `base.ir-model` → `ir-model`.
+            segment = model_name.split(".", 1)[1] if "." in model_name else model_name
+            label = segment.replace("-", " ").replace("_", " ").title()
+            list_id = f"{model_name}.list"
+            create_id = f"{model_name}.create"
+
+            if list_id not in existing:
+                action_registry.register_module(mod_name, [Action(
+                    id=list_id,
+                    label=label,
+                    keywords=[
+                        label.lower(),
+                        f"list of {label.lower()}",
+                        segment,
+                        model_name,
+                    ],
+                    description=f"Open the {label} list view",
+                    category=ActionCategory.NAVIGATE,
+                    target="navigate",
+                    target_url=f"/{mod_name}/{segment}",
+                    requires_feature=f"{model_name}.view",
+                    icon="list",
+                )])
+                auto_count += 1
+
+            if create_id not in existing:
+                action_registry.register_module(mod_name, [Action(
+                    id=create_id,
+                    label=f"Create {label}",
+                    keywords=[
+                        f"new {label.lower()}",
+                        f"add {label.lower()}",
+                        f"create {label.lower()}",
+                    ],
+                    description=f"Open the form to create a new {label.lower()} record",
+                    category=ActionCategory.CREATE,
+                    target="navigate",
+                    target_url=f"/{mod_name}/{segment}/new",
+                    requires_feature=f"{model_name}.create",
+                    icon="plus",
+                )])
+                auto_count += 1
+
+    if auto_count:
+        logger.info(
+            "Auto-registered %d CRUD actions in the Command Palette "
+            "(modules: %s).",
+            auto_count, ", ".join(registry.loaded_modules),
+        )
+
+
 async def _bootstrap_modules() -> None:
     """Run each module's `bootstrap.on_install()` once per fresh tenant.
 
@@ -251,6 +329,11 @@ async def lifespan(app: FastAPI):
     await registry.seed_views_to_db()
     await _bootstrap_modules()
     await _reload_rbac_cache()
+    # Auto-register CRUD actions in the Command Palette for every model
+    # exposed by the registry. Module-curated actions in `actions.py` win
+    # on id collisions; everything else gets a generic
+    # `<model>.list` / `<model>.create` pair.
+    _seed_auto_actions()
     logger.info("Startup complete — RBAC cache loaded.")
     yield
     logger.info("Shutting down.")

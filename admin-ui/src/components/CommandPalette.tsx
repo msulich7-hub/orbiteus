@@ -169,7 +169,10 @@ export default function CommandPalette() {
           params: { q: query, limit: 12 },
           skipGlobalErrorToast: true,
         });
-        setResults(data.results ?? []);
+        // Backend returns `{ items: [...] }`; older paths shipped
+        // `{ results: [...] }`. Read both so the palette works against
+        // either contract.
+        setResults((data?.items ?? data?.results ?? []) as ScoredAction[]);
         setActiveIdx(0);
       } catch {
         setResults([]);
