@@ -7,7 +7,7 @@ We are glad you want to help improve the engine. This guide matches how the **Or
 | Path | Role |
 |------|------|
 | `backend/` | FastAPI app, `orbiteus_core`, Alembic, **modules** under `backend/modules/<name>/` |
-| `admin-ui/` | Next.js 14 admin (App Router, Mantine)—dynamic renderer driven by backend `ui-config` |
+| `admin-ui/` | Next.js 16 admin (App Router, React 19, Mantine 9) — dynamic renderer driven by backend `ui-config` |
 | `docs/` | Cross-cutting documentation; start with **`docs/ARCHITECTURE.md`** |
 | `docker-compose.yml` | Full stack (PostgreSQL, backend, admin UI) for local integration |
 

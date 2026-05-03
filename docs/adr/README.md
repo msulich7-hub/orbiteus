@@ -13,7 +13,7 @@ Use the structure in [`_template.md`](./_template.md) for new ADRs.
 | # | Title | Status |
 |---|---|---|
 | 0001 | [Engine vs Framework vs Product positioning](./0001-engine-vs-framework.md) | Accepted |
-| 0002 | [Mantine 8 as the only design system](./0002-mantine-as-design-system.md) | Accepted |
+| 0002 | [Mantine as the only design system](./0002-mantine-as-design-system.md) | Accepted |
 | 0003 | [RBAC cache on Redis](./0003-rbac-cache-on-redis.md) | Accepted |
 | 0004 | [BYOK AI credentials with Fernet](./0004-byok-ai-credentials.md) | Accepted |
 | 0005 | [pgvector for embeddings](./0005-pgvector-for-embeddings.md) | Accepted |

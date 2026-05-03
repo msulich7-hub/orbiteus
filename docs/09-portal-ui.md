@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A separate Next.js 14 application (`portal-ui/`) for **external** users —
+A separate Next.js 16 application (`portal-ui/`) for **external** users —
 clients, partners, contractors. Same engine, same backend, same design system,
 different attack surface and different RBAC scope.
 

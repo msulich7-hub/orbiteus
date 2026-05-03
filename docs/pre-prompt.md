@@ -13,9 +13,9 @@ You are an engineer working on **Orbiteus**, an AI-native engine for building
 business applications and internal AI agents. Orbiteus is a **modular monolith**
 with three deployment artifacts:
 
-- `backend/` — FastAPI (Python 3.13) + PostgreSQL + Redis
-- `admin-ui/` — Next.js 14 + Mantine 8 (internal users)
-- `portal-ui/` — Next.js 14 + Mantine 8 (external users / partners, RBAC scope: `portal`)
+- `backend/` — FastAPI (Python 3.13) + PostgreSQL 16 + Redis 7
+- `admin-ui/` — Next.js 16 + React 19 + Mantine 9 (internal users)
+- `portal-ui/` — Next.js 16 + React 19 + Mantine 9 (external users / partners, RBAC scope: `portal`)
 
 Orbiteus is **not** a finished product. It is an **engine** — framework primitives
 plus a small set of opinionated, batteries-included subsystems (auth, RBAC,
@@ -51,7 +51,7 @@ product example* (CRM-MVP) that demonstrates the platform.
 
 ```
 +---------------------------+     +---------------------------+
-|   admin-ui (Next.js 14)   |     |   portal-ui (Next.js 14)  |
+|   admin-ui (Next.js 16)   |     |   portal-ui (Next.js 16)  |
 |   internal users (RBAC)   |     |   external users / share  |
 +-------------+-------------+     +-------------+-------------+
               |  /api/*  (Next rewrites + same-origin)        |
@@ -89,9 +89,12 @@ This list is binding. Anything outside it requires an ADR.
 - Logging: stdlib + JSON formatter; metrics: prometheus_client; tracing: OpenTelemetry (opt-in)
 
 ### Frontend
-- Next.js 14 (App Router), React 18
-- **Mantine 8** as the only design system (no shadcn, MUI, Chakra, Ant)
-- @tabler/icons-react, axios, dayjs, recharts, @dnd-kit
+- **Next.js 16** (App Router), **React 19**
+- Edge auth gate via `proxy.ts` (Next 16 successor to `middleware.ts`)
+- **Mantine 9** as the only design system (no shadcn, MUI, Chakra, Ant).
+  ADR-0002 floats with major Mantine versions; the *decision* (Mantine as
+  the sole DS) is what's locked, not the version number.
+- @tabler/icons-react 3, axios 1, dayjs 1, recharts 3, @dnd-kit 6
 - npm workspaces with `packages/ui` shared between `admin-ui` and `portal-ui`
 
 ### Infra
@@ -190,7 +193,7 @@ in `bootstrap.py` of that module — never in `backend/api.py`.
   stop and use the catch-all `[module]/[model]` routes instead.
 - Public landing lives at `/welcome`; sign-in form lives at `/login`; authenticated
   app starts at `/`. Do not merge those concerns into one route.
-- All UI primitives come from Mantine 8 + `packages/ui` (shared widgets).
+- All UI primitives come from Mantine 9 + `packages/ui` (shared widgets).
   Do not introduce a second design system.
 - Forms render through the widget registry. To add a new input type, register
   a widget; do not write ad-hoc components inside pages.
@@ -245,7 +248,7 @@ docs/06-auth.md                 — JWT, refresh rotation, 2FA, share-links
 docs/07-api.md                  — auto-CRUD, query operators, OpenAPI, webhooks
 docs/08-admin-ui.md             — dynamic renderer, widget registry, ⌘K
 docs/09-portal-ui.md            — external partner portal
-docs/10-design-system.md        — Mantine 8 + packages/ui + branding
+docs/10-design-system.md        — Mantine 9 + packages/ui + branding
 docs/11-realtime.md             — SSE + Redis Pub/Sub backplane
 docs/12-events-and-queues.md    — EventBus + Postgres Outbox + Celery
 docs/13-cache.md                — Redis usage map and TTLs

@@ -18,7 +18,7 @@ Orbiteus ships:
 - An **AI layer** (providers, BYOK, tools, embeddings, prompts, dashboards).
 - A **canonical product example** (`modules/crm` with Person / Lead / Stage / Team).
 - Two front-ends (`admin-ui` for internal users, `portal-ui` for external partners)
-  built on a shared design system (`packages/ui` on top of Mantine 8).
+  built on a shared design system (`packages/ui` on top of Mantine 9).
 
 The promise: a senior engineer cloning the repo and running `docker compose up`
 gets a production-grade skeleton (auth, RBAC, audit, AI, realtime) and a working

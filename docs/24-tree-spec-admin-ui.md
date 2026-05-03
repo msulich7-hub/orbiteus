@@ -4,7 +4,7 @@
 
 ## 1. Foundation — DONE
 
-- [x] Next.js 14 App Router + React 18 + Mantine 8
+- [x] Next.js 16 App Router + React 19 + Mantine 9
 - [x] axios with Bearer token + 401 redirect
 - [x] ui-config fetcher + cache (`lib/modelConfig.ts`)
 - [x] XML view arch parser (`lib/viewParser.ts`)

@@ -130,7 +130,8 @@ Backend / infra:
 - Webhook delivery Celery task with HMAC-SHA256 signature.
 - Celery Beat reads `ir_cron` and schedules.
 - Compose: `worker` and `beat` services (separate replicas).
-- Replace `worker.py` (Temporal stub) with Celery; update README.
+- Replace any leftover `worker.py` Temporal stubs with Celery (see ADR-0015);
+  update README accordingly.
 
 Tests:
 
@@ -299,7 +300,7 @@ provider.
 
 ### PR 12 — `feat/portal-ui`
 
-- Scaffold `portal-ui/` Next.js 14 app.
+- Scaffold `portal-ui/` Next.js 16 app.
 - Share-link issuance + exchange (`POST /api/auth/share`, `/s/[token]`).
 - Portal scope JWT enforcement middleware (`scope=portal`).
 - `<portal>` view declaration parser.

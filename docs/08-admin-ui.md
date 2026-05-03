@@ -2,9 +2,9 @@
 
 ## Stack
 
-- Next.js 14 App Router
-- React 18
-- Mantine 8 (only design system; no shadcn / MUI / Chakra / Ant)
+- Next.js 16 App Router
+- React 19
+- Mantine 9 (only design system; no shadcn / MUI / Chakra / Ant)
 - `@orbiteus/ui` (workspace package: shared widgets, hooks, AI inputs)
 - axios, dayjs, recharts, @dnd-kit, @tabler/icons-react
 

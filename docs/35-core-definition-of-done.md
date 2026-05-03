@@ -112,7 +112,7 @@ true. No exceptions, no "we'll add it later".
 
 ## 12. Portal UI (external partner)
 
-- [ ] `portal-ui/` Next.js 14 app scaffolded.
+- [x] `portal-ui/` Next.js 16 app scaffolded.
 - [ ] Share-link issuance endpoint (`POST /api/auth/share`) live.
 - [ ] `/s/[token]` exchange flow working.
 - [ ] `<portal>` view declaration parsed and respected (read-only by default).

@@ -2,7 +2,9 @@
 
 ## One DS, two front-ends
 
-- **Mantine 8** is the only design system.
+- **Mantine 9** is the only design system. ADR-0002 floats with major
+  Mantine versions; the *decision* (Mantine as the sole DS) is what's
+  locked, not the version number.
 - Shared widgets and AI components live in `packages/ui`, an npm workspace
   consumed by both `admin-ui` and `portal-ui`.
 - No second DS. Adding one requires an ADR (and a strong reason — ADR `0002`
@@ -12,8 +14,8 @@
 
 ```
 package.json                 (workspaces: ["admin-ui", "portal-ui", "packages/*"])
-admin-ui/                    (Next.js app)
-portal-ui/                   (Next.js app — to be added)
+admin-ui/                    (Next.js 16 + React 19)
+portal-ui/                   (Next.js 16 + React 19)
 packages/
   ui/                        (@orbiteus/ui)
     src/

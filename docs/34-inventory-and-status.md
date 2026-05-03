@@ -23,8 +23,9 @@
 | AutoRouter (5 CRUD endpoints) | DONE | `auto_router.py` | — |
 | ui-config builder | DONE | `ui_config.py` | needs `relation` for many2one |
 | RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | Redis cache abstraction available (PR 6); RBAC migration to Redis remaining |
-| JWT + bcrypt | DONE | `security/{tokens,passwords,jti,rate_limit}.py` | 15min/7d, jti revocation list, refresh rotation flag — PR 6 |
-| TOTP 2FA | DONE | `security/tokens.py` | recovery codes MISSING |
+| JWT + bcrypt | DONE | `security/{tokens,passwords,jti,rate_limit}.py` | 15min/7d, jti revocation list, refresh rotation in `/api/auth/refresh` |
+| **httpOnly cookie session (Admin UI)** | DONE | `security/cookies.py`, `security/middleware.py` (cookie fallback), `modules/auth/controller/router.py`, `admin-ui/src/proxy.ts` | ADR-0017; eliminates FOAC at the Edge |
+| TOTP 2FA + recovery codes | DONE | `security/tokens.py`, `security/recovery_codes.py`, `POST /api/auth/2fa/recovery-codes` | bcrypt-hashed, single-use codes |
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
 | **EventBus (in-process)** | DONE | `orbiteus_core/events.py` | sync error isolation, decorator subscribe |
@@ -37,12 +38,12 @@
 | **Attachments upload/download** | STUB | `IrAttachment` row only | core wave 3 |
 | **Mail/SMTP send** | STUB | `IrMailTemplate` row only | core wave 3 |
 | **Activities/chatter** | MISSING | — | core wave 3 |
-| **Workflow engine (generic)** | MISSING | CRM-specific via Temporal | core wave 3 |
+| **Workflow engine (generic)** | MISSING | — (Temporal explicitly excluded by ADR-0015; reach for it only when sagas materialise) | core wave 3 |
 | **Computed fields** | MISSING | — | core wave 3 |
 | **Onchange engine** | MISSING | — | core wave 3 |
 | **Aggregate endpoint** | MISSING | — | needed for AI dashboard |
 | **CSV import/export** | MISSING | — | core wave 3 |
-| **Server actions / cron exec** | STUB | `IrCron` + Temporal stub | replace with Celery Beat |
+| **Server actions / cron exec** | DONE | `IrCron` rows + Celery Beat schedule (ADR-0015 supersedes prior Temporal stub) | runtime smoke test in next pass |
 | **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
 | **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` | per-IP active; tenant/user buckets ready to wire post-auth |
 | **Realtime (SSE) + Pub/Sub backplane** | DONE | `orbiteus_core/realtime.py` (publisher + topic helpers + SSE stream) and `realtime_router.py` (`/api/realtime/subscribe`); BaseRepository events bridged via Redis Pub/Sub | nginx config already has `proxy_buffering off` (PR 2) |
@@ -77,7 +78,7 @@
 
 | Concern | Status | Path | Gap vs docs |
 |---|---|---|---|
-| Mantine 8, Next.js 14 setup | DONE | — | — |
+| Mantine 9, Next.js 16 setup | DONE | — | — |
 | AppShellLayout + sidebar | DONE | `components/AppShellLayout.tsx` | i18n cleanup needed |
 | Login + JWT flow | DONE | `app/login/page.tsx` | will split into `/welcome` + `/login` |
 | Welcome landing | DONE (under `/login`) | same | move to `/welcome`, `/login` becomes form-only |
@@ -109,7 +110,7 @@
 
 | Concern | Status | Path |
 |---|---|---|
-| App scaffold (Next.js 14 + Mantine + workspaces) | DONE | `portal-ui/` |
+| App scaffold (Next.js 16 + Mantine 9 + workspaces) | DONE | `portal-ui/` |
 | Production Dockerfile | DONE | `portal-ui/Dockerfile.prod` |
 | Share-link landing `/s/[token]` | DONE | exchanges via `/api/portal/exchange` |
 | Backend `POST /api/auth/share` | DONE | `modules/auth/controller/router.py`; portal scope JWT |

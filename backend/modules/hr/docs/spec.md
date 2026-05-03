@@ -1,76 +1,26 @@
-# Moduł hr — Specification
+# `hr` module — spec (planned)
 
-> Status: TODO (Faza 3)
-> depends_on: [base]
+> **Status: PLANNED.** Not part of the v1.0 engine release. The CRM
+> module (`backend/modules/crm/`) is the only canonical product example
+> shipped at v1.0; HR is reserved as a teaching example for future
+> waves.
+>
+> **Canonical sources for the engine surface this module would use:**
+> - `docs/03-modules.md` — module convention (manifest / model / controller / view)
+> - `docs/04-data-model.md` — `BaseModel`
+> - `docs/15-ai-layer.md` — `ai.py` registration
 
----
+## Intent (when implemented)
 
-## Cel modułu
+Employee lifecycle (Employee, Department, JobTitle, TimeOff). Distinction
+between `User` (login identity, in `base`) and `Employee` (HR record).
 
-Zarządzanie pracownikami. Różnica między User a Employee:
-- **User** — konto do logowania w systemie (techniczne)
-- **Employee** — osoba zatrudniona (biznesowe: stanowisko, dział, umowa, wynagrodzenie)
+`Employee.user_id` is a nullable FK to `User` so external workers can be
+tracked without consuming a login seat.
 
-Jeden User może być powiązany z jednym Employee. Employee może nie mieć dostępu do systemu.
+## Why deferred
 
----
-
-## Modele domenowe
-
-### Department
-```python
-id, tenant_id, company_id,
-name, parent_id,   # hierarchia działów
-manager_id         # FK → Employee
-```
-
-### JobPosition
-```python
-id, tenant_id, company_id,
-name, department_id,
-expected_employees,   # ile osób na tym stanowisku
-```
-
-### Employee
-```python
-id, tenant_id, company_id,
-name, job_title, job_position_id,
-department_id, manager_id,
-user_id,           # FK → base_users (opcjonalne — nie każdy employee ma konto)
-work_email, work_phone, mobile_phone,
-address_id,        # FK → base_partners
-private_email,
-gender, birthday, marital_status,
-nationality, id_number,
-contract_type,     # "full_time" | "part_time" | "b2b" | "contractor"
-employment_date, termination_date,
-active
-```
-Tabela: `hr_employees`
-
-### Contract
-```python
-id, tenant_id, employee_id,
-name, contract_type,
-date_start, date_end,
-wage, currency_code,
-notes
-```
-Tabela: `hr_contracts`
-
----
-
-## Widoki UI
-
-| Widok | Model | Status |
-|---|---|---|
-| List | Employee | TODO |
-| Form | Employee | TODO |
-| Org Chart | Department tree | TODO (V2) |
-
----
-
-## TODO
-- Timesheets (depends on project)
-- Leave management
-- Payroll (V2)
+CRM already exercises every framework primitive end-to-end. Adding HR at
+v1.0 would only repeat the pattern without exercising new engine
+surface area. HR is a strong candidate for the first community-driven
+module after v1.0.

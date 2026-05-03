@@ -11,7 +11,7 @@ resources. The threat model and UX are different from the admin UI.
 
 ## Decision
 
-`portal-ui/` is a separate Next.js 14 application sharing only `packages/ui`
+`portal-ui/` is a separate Next.js 16 application sharing only `packages/ui`
 with `admin-ui`. Separate domain (`portal.example.com`), separate cookies,
 separate CSP, separate routes. JWTs carry `scope=portal` and are never
 accepted by admin-ui.

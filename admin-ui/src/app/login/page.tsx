@@ -650,7 +650,7 @@ export default function LoginPage() {
               </Anchor>
             </Group>
             <Text size="xs" c="dimmed" ta="center">
-              Built with Next.js 14, FastAPI, SQLAlchemy 2 (async), and Mantine — modular by design.
+              Built with Next.js 16, FastAPI, SQLAlchemy 2 (async), and Mantine 9 — modular by design.
             </Text>
           </Stack>
         </Stack>

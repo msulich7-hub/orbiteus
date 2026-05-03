@@ -76,7 +76,8 @@ First **Engine v1.0** — boring tech stack, AI-native, ready for adopters.
 
 - **No Temporal in MVP** (ADR-0015). `worker.py` and
   `orbiteus_core/temporal.py` removed; replaced by Celery + Outbox.
-- **Mantine 8 is the only design system** for both apps (ADR-0002).
+- **Mantine 9 is the only design system** for both apps (ADR-0002 — locks
+  the choice of Mantine, not a specific major).
 - Default Postgres image is **`pgvector/pgvector:pg16`** in dev and prod
   compose.
 

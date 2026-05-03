@@ -4,7 +4,7 @@
 
 ```
 +---------------------------+     +---------------------------+
-|   admin-ui (Next.js 14)   |     |   portal-ui (Next.js 14)  |
+|   admin-ui (Next.js 16)   |     |   portal-ui (Next.js 16)  |
 |   internal users (RBAC)   |     |   external users / share  |
 +-------------+-------------+     +-------------+-------------+
               |  /api/* (Next rewrites, same-origin)          |
@@ -72,11 +72,11 @@ See ADRs `0011`, `0012`, `0013`, `0014`, `0015` for the full reasoning.
 
 | Concern | Choice |
 |---|---|
-| Framework | Next.js 14 App Router |
-| Design system | Mantine 8 |
+| Framework | Next.js 16 App Router (React 19) |
+| Design system | Mantine 9 |
 | Shared widgets | `packages/ui` (npm workspace) |
 | State | Component-local + axios + ui-config cache |
-| Charts | recharts |
+| Charts | Recharts 3 |
 
 `admin-ui` and `portal-ui` are independent Next.js apps that share `packages/ui`.
 

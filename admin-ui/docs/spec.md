@@ -1,178 +1,129 @@
-# Admin UI — Specification
+# Admin UI — spec
 
-> Status: IMPLEMENTED (v0.1)
-> Stack: Next.js 14 (App Router) + Mantine 8 + axios
+> **Superseded by `docs/`.** Authoritative documentation lives in the
+> top-level `docs/` chapters. This file is kept next to the source for
+> in-tree readability.
+>
+> **Canonical sources:**
+> - `docs/08-admin-ui.md` — design + dynamic renderer
+> - `docs/24-tree-spec-admin-ui.md` — implementation tree-spec
+> - `docs/10-design-system.md` — Mantine 9 + `packages/ui`
+> - `docs/adr/0017-httponly-cookie-session.md` — auth transport
 
----
+> **Status:** IMPLEMENTED at v1.0
+> **Stack:** Next.js 16 (App Router) + React 19 + Mantine 9 + axios 1
+> **Edge auth gate:** `admin-ui/src/proxy.ts` (Next 16 successor of
+> `middleware.ts`)
 
-## Cel
+## Purpose
 
-Generyczny admin panel dla engine. White-label — nazwa i logo z API.
-Każdy nowy moduł backendowy automatycznie dostaje ekrany w UI przez auto-CRUD.
+Generic, white-label admin UI for the engine. Branding (name, logo,
+favicon) comes from `GET /api/base/branding`. Every backend module
+automatically gets list / form / kanban / calendar screens through the
+dynamic catch-all routes (`[module]/[model]`) that read
+`GET /api/base/ui-config` — adding a module never requires writing new
+TSX files.
 
----
-
-## Architektura
+## Repository layout (current)
 
 ```
-/admin-ui/src/
-├── app/                          # Next.js App Router pages
-│   ├── layout.tsx                # Root: MantineProvider + BrandingProvider
-│   ├── page.tsx                  # Dashboard
-│   ├── login/page.tsx            # Strona logowania
-│   ├── crm/
-│   │   ├── customers/page.tsx
-│   │   ├── opportunities/page.tsx
-│   │   └── pipelines/page.tsx
-│   ├── base/
-│   │   ├── companies/page.tsx
-│   │   ├── users/page.tsx
-│   │   └── partners/page.tsx
-│   └── technical/
-│       ├── models/page.tsx
-│       ├── access/page.tsx
-│       ├── rules/page.tsx
-│       ├── params/page.tsx
-│       ├── sequences/page.tsx
-│       └── crons/page.tsx
+admin-ui/src/
+├── proxy.ts                       # Next 16 Edge gate (httpOnly cookie)
+├── app/
+│   ├── layout.tsx                 # MantineProvider + BrandingProvider
+│   ├── page.tsx                   # Dashboard (PromptInput + AIDashboard)
+│   ├── login/page.tsx             # Welcome + login form (cookie-based)
+│   └── [module]/[model]/          # Dynamic list / form / kanban
 ├── components/
-│   ├── AppShellLayout.tsx        # Sidebar + Header (Mantine AppShell)
-│   ├── ResourceList.tsx          # Generic list view
-│   ├── ResourceForm.tsx          # TODO: Generic create/edit form
-│   └── ResourceKanban.tsx        # TODO: Generic kanban view
+│   ├── AppShellLayout.tsx         # Sidebar + Header (Mantine AppShell)
+│   ├── ResourceList.tsx           # Generic list view (auto-CRUD)
+│   ├── ResourceForm.tsx           # Generic create / edit form
+│   ├── ResourceKanban.tsx         # Generic kanban (dnd-kit)
+│   ├── ResourceCalendar.tsx       # Generic calendar
+│   ├── CommandPalette.tsx         # Cmd+K (uses /api/ai/actions)
+│   └── PageBreadcrumbs.tsx
 └── lib/
-    ├── api.ts                    # axios instance + interceptors
-    └── branding.tsx              # BrandingContext + useBranding()
+    ├── api.ts                     # axios with `withCredentials: true`
+    └── branding.tsx               # BrandingContext + useBranding()
 ```
 
----
-
-## Komponenty generyczne
-
-### ResourceList (DONE)
-```tsx
-<ResourceList
-  title="Klienci"
-  resource="crm/customer"
-  createHref="/crm/customers/new"
-  columns={[
-    { key: "name", label: "Nazwa" },
-    { key: "status", label: "Status", render: (v) => <Badge>{v}</Badge> },
-  ]}
-/>
-```
-- Fetches GET /api/{resource}
-- Mantine Table (striped, dark theme)
-- Loading state, error state, empty state
-- "Nowy" button → createHref
-
-### ResourceForm (TODO — Faza 1)
-```tsx
-<ResourceForm
-  title="Nowy klient"
-  resource="crm/customer"
-  fields={[
-    { key: "name", label: "Nazwa", type: "text", required: true },
-    { key: "email", label: "Email", type: "email" },
-    { key: "status", label: "Status", type: "select",
-      options: ["lead", "prospect", "customer"] },
-  ]}
-  onSuccess={(record) => router.push(`/crm/customers/${record.id}`)}
-/>
-```
-- POST/PUT /api/{resource} lub /api/{resource}/{id}
-- Mantine TextInput, Select, Textarea, DateInput itp.
-- Inline validation (z Pydantic error messages)
-- Loading state na submit
-
-### ResourceKanban (TODO — Faza 1)
-```tsx
-<ResourceKanban
-  resource="crm/opportunity"
-  groupBy="stage_id"
-  groupsResource="crm/stage"
-  card={(record) => <OpportunityCard record={record} />}
-  onMove={(recordId, newGroupId) => api.post(...)}
-/>
-```
-- Drag & drop między kolumnami (biblioteka: @dnd-kit)
-- Optimistic update przy drag
-- Fetch groups (stages) + records per group
-
----
+The `crm/` / `base/` / `technical/` *static* page directories that the
+old version of this spec listed have been removed (PR 12); everything
+flows through the dynamic catch-all routes now.
 
 ## Routing convention
 
 ```
-/crm/customers          → list
-/crm/customers/new      → create form
-/crm/customers/{id}     → view/edit form
-/crm/opportunities      → list
-/crm/opportunities/kanban → kanban view
+/                                  → dashboard
+/login                             → welcome + login (public)
+/{module}/{model}                  → list  (e.g. /crm/lead)
+/{module}/{model}/new              → create form
+/{module}/{model}/{id}             → view / edit form
+/{module}/{model}/kanban           → kanban view (when arch is declared)
+/{module}/{model}/calendar         → calendar view (when arch is declared)
 ```
 
----
+## Auth flow (browser)
 
-## Auth flow
+1. The Edge proxy (`proxy.ts`) reads the `orbiteus_token` cookie. No
+   cookie → 307 redirect to `/login?next=<path>` *before* SSR runs (no
+   Flash Of Authenticated Content).
+2. `POST /api/auth/login` returns the JWT pair in the body **and** sets
+   `orbiteus_token` (`Path=/`, 15 min) plus `orbiteus_refresh`
+   (`Path=/api/auth`, 7 days) as `HttpOnly`, `SameSite=Lax`. `Secure`
+   flips on automatically in production.
+3. axios is configured with `withCredentials: true`; the browser sends
+   the cookie on every same-origin `/api/*` call. There is no Bearer
+   header injected from `localStorage` — the previous transport.
+4. `POST /api/auth/logout` revokes the JTI in Redis and clears both
+   cookies.
 
-1. Brak tokena w localStorage → redirect /login
-2. Formularz login → POST /api/auth/login
-3. Token zapisany w localStorage
-4. axios interceptor request → dodaje Authorization: Bearer {token}
-5. axios interceptor response 401 → clear token + redirect /login
-6. Wylogowanie → clear localStorage + redirect /login
-
----
+See `docs/06-auth.md` and ADR-0017 for the full rationale.
 
 ## Branding
 
 ```
-GET /api/base/branding → {name, logo_url, favicon_url}
-  ↓
+GET /api/base/branding → { name, logo_url, favicon_url }
+        ↓
 BrandingContext (React Context)
-  ↓
+        ↓
 useBranding() hook
-  ↓
-AppShellLayout (header: logo lub nazwa)
-LoginPage (title: logo lub nazwa)
-layout.tsx (metadata title)
+        ↓
+AppShellLayout (header)  /  Login page (title)  /  metadata title
 
-Fallback: NEXT_PUBLIC_APP_NAME z .env.local
+Fallback: NEXT_PUBLIC_APP_NAME from .env.local
 ```
-
----
 
 ## Design system
 
-- **Framework:** Mantine 8
-- **Motyw:** dark (czarne tło dark-9, sidebar dark-8)
-- **Primary color:** dark (monochrome)
-- **Ikony:** @tabler/icons-react
+- **Framework:** Mantine 9
+- **Theme:** dark by default (Mantine `dark` palette); user-toggleable
+  light mode persists in `localStorage` (UI preference, not auth).
+- **Primary color:** monochrome (black / white).
+- **Icons:** `@tabler/icons-react`
 - **Font:** Inter
+- **Charts:** Recharts 3 (rendered through `<AIDashboard>`)
 
-### Kolory (Mantine dark palette)
+### Mantine dark palette tokens (current theme)
+
 ```
-dark-9: #101113  ← main background
-dark-8: #141517  ← sidebar, header
-dark-7: #1A1B1E  ← table background
-dark-6: #25262b  ← borders
-dark-5: #2C2E33  ← input borders
-gray-2: #C1C2C5  ← primary text
-gray-4: #909296  ← secondary text / dimmed
+dark-9: #101113   main background
+dark-8: #141517   sidebar, header
+dark-7: #1A1B1E   table background
+dark-6: #25262b   borders
+dark-5: #2C2E33   input borders
+gray-2: #C1C2C5   primary text
+gray-4: #909296   secondary / dimmed text
 ```
 
----
+## Status
 
-## TODO
+100% Definition of Done at v1.0. Open follow-ups (post-v1.0):
 
-| Feature | Priority |
-|---|---|
-| ResourceForm (Create/Edit) | High |
-| Delete z potwierdzeniem (Modal) | High |
-| ResourceKanban + drag&drop | High |
-| Breadcrumbs | Medium |
-| Pagination w ResourceList | Medium |
-| Search/filter w ResourceList | Medium |
-| ResourceCalendar | Medium |
-| Notifications (toast) przy akcjach | Medium |
-| Dark/Light mode toggle | Low |
+| Feature                                         | Priority |
+|-------------------------------------------------|----------|
+| Field-level RBAC in form components             | High     |
+| Multi-company switcher in header                | Medium   |
+| Calendar drag-to-reschedule                     | Medium   |
+| AI streaming (`/api/ai/chat` SSE)               | Medium   |
+| Light-mode toggle in header                     | Low      |
