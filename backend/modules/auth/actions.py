@@ -5,12 +5,7 @@ ACTIONS = [
     Action(
         id="auth.logout",
         label="Log Out",
-        keywords=[
-            # EN
-            "logout", "log out", "sign out", "exit", "end session",
-            # PL
-            "wyloguj", "wyloguj się", "wyjdź", "zakończ sesję",
-        ],
+        keywords=["logout", "log out", "sign out", "exit", "end session"],
         description="End session and go to login page",
         category=ActionCategory.EXECUTE,
         target="navigate",
@@ -20,12 +15,7 @@ ACTIONS = [
     Action(
         id="auth.profile",
         label="My Profile",
-        keywords=[
-            # EN
-            "profile", "my account", "account settings", "my profile",
-            # PL
-            "profil", "mój profil", "moje konto", "ustawienia konta",
-        ],
+        keywords=["profile", "my account", "account settings", "my profile"],
         description="View and edit your user profile",
         category=ActionCategory.NAVIGATE,
         target="navigate",

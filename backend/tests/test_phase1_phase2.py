@@ -1,4 +1,15 @@
-"""Phase 1 + Phase 2 smoke tests.
+"""Phase 1 + Phase 2 smoke tests (LEGACY — pre-canonical CRM rename).
+
+Status
+------
+Outdated. These tests target the **legacy** `crm.customer` model and a
+local `tests/conftest.py` whose import path no longer matches the
+repository layout. They are NOT collected by the canonical pytest run
+defined in `backend/pyproject.toml` (`testpaths = ["tests"]` at the repo
+root, not `backend/tests/`). They are kept here for reference only.
+
+What used to be covered
+-----------------------
 
 PHASE 1:
   - GET /api/base/ui-config returns modules + fields
@@ -6,7 +17,14 @@ PHASE 1:
 
 PHASE 2:
   - GET /api/ai/actions returns ranked actions
-  - Command Palette resolves "nowy klient" → Utwórz klienta
+  - Command Palette resolves "new customer" → "Create Customer"
+
+What changed
+------------
+The CRM module was migrated to the canonical Person / Lead / Stage / Team
+schema (ADR-0008). `crm.customer` no longer exists; equivalent coverage
+lives in `tests/test_canonical_crm.py` and the Admin UI Playwright suite
+(`admin-ui/e2e/critical-path.spec.ts`).
 """
 from __future__ import annotations
 
@@ -142,39 +160,41 @@ async def test_ai_actions_requires_auth(client):
 
 @pytest.mark.asyncio
 async def test_ai_actions_returns_results(client):
-    """GET /api/ai/actions?q=klient returns ranked actions."""
+    """GET /api/ai/actions?q=customer returns ranked actions."""
     tokens = await register_user(client)
     token = tokens["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    resp = await client.get("/api/ai/actions", params={"q": "klient", "limit": 5}, headers=headers)
+    resp = await client.get("/api/ai/actions", params={"q": "customer", "limit": 5}, headers=headers)
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "results" in data
     assert len(data["results"]) > 0
 
-    # First result should be about customers
+    # First result should be CRM-related (Person / Lead).
     first = data["results"][0]["action"]
-    assert "crm" in first["id"] or "klient" in first["label"].lower()
+    assert "crm" in first["id"] or "customer" in first["label"].lower()
 
 
 @pytest.mark.asyncio
 async def test_ai_actions_command_palette_scenario(client):
-    """Cmd+K scenario: 'nowy klient' → top result is 'Utwórz klienta'."""
+    """Cmd+K scenario: 'new customer' → top result is 'Create Person'."""
     tokens = await register_user(client)
     token = tokens["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    resp = await client.get("/api/ai/actions", params={"q": "nowy klient", "limit": 8}, headers=headers)
+    resp = await client.get("/api/ai/actions", params={"q": "new customer", "limit": 8}, headers=headers)
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert len(results) > 0
 
     top = results[0]["action"]
-    assert top["id"] == "crm.customer.create", (
-        f"Expected 'crm.customer.create' as top result, got '{top['id']}'"
+    # `crm.customer.create` was retired by ADR-0008 in favour of
+    # `crm.person.create`; this assertion mirrors the canonical surface.
+    assert top["id"] == "crm.person.create", (
+        f"Expected 'crm.person.create' as top result, got '{top['id']}'"
     )
-    assert top["target_url"] == "/crm/customer/new"
+    assert top["target_url"] == "/crm/person/new"
 
 
 @pytest.mark.asyncio
