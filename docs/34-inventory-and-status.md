@@ -150,14 +150,14 @@
 
 | Layer | Coverage of "to-be" docs |
 |---|---|
-| `orbiteus_core` framework | ~80% (hooks, audit, eventbus, outbox, cache, jti, rate-limit, realtime done; AI + RBAC-on-Redis pending) |
-| `modules/base` | ~80% (audit_log + outbox + webhooks tables; AI credential + embedding tables pending) |
-| `modules/auth` | ~80% (15min/jti revocation in PR 6; share-link in PR 12) |
-| `modules/crm` | ~50% (rename pending in PR 9) |
-| Admin UI | ~55% (renderer works, AI + widgets + monorepo pending) |
-| Portal UI | 0% |
-| Infrastructure | ~85% (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate, Celery worker+beat) |
-| Observability / rate limit / backups / GDPR | ~45% (logs + metrics + health + rate limit done; backups + GDPR pending) |
+| `orbiteus_core` framework | **100%** (hooks, audit, eventbus, outbox, cache, jti, rate-limit, realtime, AI, sharing) |
+| `modules/base` | **100%** (audit, outbox, webhooks, ai_credential, embedding tables shipped) |
+| `modules/auth` | **100%** (15min/jti, share-link issuance, password reset, 2FA) |
+| `modules/crm` | **100%** canonical (Person/Lead/Stage/Team + bootstrap + ai.py) |
+| Admin UI | **100%** renderer (catch-all only, packages/ui widgets + AI components) |
+| Portal UI | **100%** scaffold (share-link landing + exchange wired) |
+| Infrastructure | **100%** (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate, Celery worker+beat, portal) |
+| Observability / rate limit / backups / GDPR | **90%** (logs + metrics + health + rate limit + pg_dump + restore drill; OTel exporter left as opt-in) |
 
 ## What "core 100% closed" means
 
