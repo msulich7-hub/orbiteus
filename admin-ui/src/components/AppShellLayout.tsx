@@ -7,10 +7,11 @@ import Link from "next/link";
 import {
   IconDashboard, IconSettings, IconShieldLock, IconFilter, IconAdjustments,
   IconClockPlay, IconList, IconLogout, IconUser, IconBriefcase, IconUsers,
-  IconBuilding, IconTable, IconSearch,
+  IconBuilding, IconTable, IconSearch, IconSparkles,
 } from "@tabler/icons-react";
 import { useBranding } from "@/lib/branding";
-import { api, fetchUiConfig, type ModuleConfig } from "@/lib/api";
+import { api, type ModuleConfig } from "@/lib/api";
+import { getCachedUiConfig } from "@/lib/modelConfig";
 import CommandPalette from "@/components/CommandPalette";
 import PageBreadcrumbs from "@/components/PageBreadcrumbs";
 
@@ -25,12 +26,13 @@ const DEFAULT_ICON: React.ComponentType<{ size?: number | string; stroke?: numbe
 const HIDDEN_MODULES = new Set(["auth", "base"]);
 
 const TECHNICAL_NAV = [
-  { label: "Models",     href: "/base/ir-model",         icon: IconSettings },
-  { label: "Access",     href: "/base/ir-model-access",  icon: IconShieldLock },
-  { label: "Rules",      href: "/base/ir-rule",          icon: IconFilter },
-  { label: "Parameters", href: "/base/ir-config-param",  icon: IconAdjustments },
-  { label: "Sequences",  href: "/base/ir-sequence",      icon: IconList },
-  { label: "Cron Jobs",  href: "/base/ir-cron",          icon: IconClockPlay },
+  { label: "Models",          href: "/base/ir-model",         icon: IconSettings },
+  { label: "Access",          href: "/base/ir-model-access",  icon: IconShieldLock },
+  { label: "Rules",           href: "/base/ir-rule",          icon: IconFilter },
+  { label: "Parameters",      href: "/base/ir-config-param",  icon: IconAdjustments },
+  { label: "Sequences",       href: "/base/ir-sequence",      icon: IconList },
+  { label: "Cron Jobs",       href: "/base/ir-cron",          icon: IconClockPlay },
+  { label: "AI Integration",  href: "/technical/ai-integration", icon: IconSparkles },
 ];
 
 function modelHref(moduleName: string, modelName: string): string {
@@ -53,19 +55,29 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   const [modules, setModules] = useState<ModuleConfig[]>([]);
   const [navLoading, setNavLoading] = useState(true);
 
-  // Auth gate is enforced server-side by `admin-ui/src/middleware.ts` reading
-  // the httpOnly `orbiteus_token` cookie before any HTML is generated.
-  // Here we only load module metadata for authenticated routes.
+  // Auth gate is enforced server-side by `admin-ui/src/proxy.ts` (Next 16
+  // Edge proxy) reading the httpOnly `orbiteus_token` cookie before any HTML
+  // is generated. Here we only load module metadata for authenticated
+  // routes.
+  //
+  // ui-config is fetched ONCE per session via `getCachedUiConfig` so the
+  // module list survives client navigations and we don't spam the backend
+  // with `/api/base/ui-config` on every route change. The previous
+  // `[path]` dependency caused ~10 calls/second when interacting with the
+  // app and intermittently emptied the sidebar mid-render.
   useEffect(() => {
     if (path === "/login" || path === "/welcome") {
       setNavLoading(false);
       return;
     }
-    fetchUiConfig()
-      .then((cfg) => setModules(cfg.modules))
-      .catch(() => {})
-      .finally(() => setNavLoading(false));
-  }, [path]);
+    let cancelled = false;
+    getCachedUiConfig()
+      .then((cfg) => { if (!cancelled) setModules(cfg.modules); })
+      .catch(() => { /* keep last-known modules */ })
+      .finally(() => { if (!cancelled) setNavLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (path === "/login" || path === "/welcome") return <>{children}</>;
 
@@ -107,7 +119,9 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
         <Group h="100%" px="md" justify="space-between">
           <Group gap="sm">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            {branding.logo_url
+            {/* Same hydration-safe gate as the login page: only flip to
+                the logo once the client effect has populated branding. */}
+            {branding.hydrated && branding.logo_url
               ? <img src={branding.logo_url} alt={branding.name} style={{ height: 28 }} />
               : <Text fw={700} size="lg">{branding.name}</Text>
             }

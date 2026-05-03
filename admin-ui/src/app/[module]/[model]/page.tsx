@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import { Group, Stack, Title, Loader, Center, Paper, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { getCachedUiConfig, findModel, modelToColumns } from "@/lib/modelConfig";
@@ -163,21 +163,62 @@ function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: Mod
   );
 }
 
-export default function DynamicListPage({ params }: { params: Params }) {
-  const { module: mod, model } = params;
-  const [cfg, setCfg] = useState<ModelConfig | null>(null);
+// Next 16 made route params async — they arrive as a Promise that must be
+// unwrapped via `React.use()` in client components (App Router). Until v15
+// `params` was a synchronous object; reading it directly now logs a noisy
+// runtime warning and breaks subsequent re-renders.
+export default function DynamicListPage({ params }: { params: Promise<Params> }) {
+  const { module: mod, model } = use(params);
+  const [cfg, setCfg] = useState<ModelConfig | null | undefined>(undefined);
 
   useEffect(() => {
+    let cancelled = false;
     getCachedUiConfig()
-      .then((config) => setCfg(findModel(config, mod, model)))
-      .catch(() => setCfg(null));
+      .then((config) => {
+        if (!cancelled) setCfg(findModel(config, mod, model));
+      })
+      .catch(() => {
+        if (!cancelled) setCfg(null);
+      });
+    return () => { cancelled = true; };
   }, [mod, model]);
 
-  if (cfg === null) return <Center h={200}><Loader color="gray" size="sm" /></Center>;
+  if (cfg === undefined) {
+    return <Center h={200}><Loader color="gray" size="sm" /></Center>;
+  }
+
+  if (cfg === null) {
+    // Fall back to a generic list view that auto-discovers columns from the
+    // backend response — keeps every model reachable even when ui-config is
+    // empty for it.
+    return (
+      <Suspense fallback={<Center h={200}><Loader color="gray" size="sm" /></Center>}>
+        <FallbackList mod={mod} model={model} />
+      </Suspense>
+    );
+  }
 
   return (
     <Suspense fallback={<Center h={200}><Loader color="gray" size="sm" /></Center>}>
       <PageContent mod={mod} model={model} cfg={cfg} />
     </Suspense>
+  );
+}
+
+function FallbackList({ mod, model }: { mod: string; model: string }) {
+  const resource = `${mod}/${model}`;
+  const title = model.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return (
+    <Stack gap="md">
+      <ViewHeader title={title} subtitle="Generic list view (no ui-config metadata)" />
+      <ResourceList
+        title={title}
+        resource={resource}
+        columns={[{ key: "id", label: "ID" }, { key: "name", label: "Name" }]}
+        fieldMeta={[]}
+        createHref={`/${mod}/${model}/new`}
+        editHref={(id) => `/${mod}/${model}/${id}`}
+      />
+    </Stack>
   );
 }

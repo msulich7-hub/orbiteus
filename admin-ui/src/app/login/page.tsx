@@ -284,7 +284,7 @@ export default function LoginPage() {
       <Stack gap="md">
         <Box>
           <Group gap="sm" mb={4}>
-            {branding.logo_url ? (
+            {branding.hydrated && branding.logo_url ? (
               <img src={branding.logo_url} alt={branding.name} style={{ height: 36 }} />
             ) : (
               <Title order={3} c="dark.9">
@@ -398,7 +398,11 @@ export default function LoginPage() {
           >
             <Flex direction="column" align="flex-start" gap="xs" w="100%" wrap="nowrap">
               <Group gap="sm" justify="flex-start" align="center" wrap="nowrap" w="100%">
-                {branding.logo_url ? (
+                {/* `branding.hydrated` is false during SSR / first paint —
+                    this gate keeps the markup identical between the server
+                    and client so React doesn't report a hydration mismatch
+                    when the logo URL arrives from /api/base/branding. */}
+                {branding.hydrated && branding.logo_url ? (
                   <>
                     <img src={branding.logo_url} alt="" aria-hidden style={{ height: 44, width: "auto", display: "block" }} />
                     <Title order={2} c="dark.9" style={{ lineHeight: 1.2 }}>

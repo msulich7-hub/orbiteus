@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Stack, Title, Text, Button, Group, TextInput, Textarea, Select,
-  Switch, NumberInput, Alert, Paper, Loader, Tabs, TagsInput, SimpleGrid,
+  Switch, NumberInput, Alert, Paper, Loader, Tabs, TagsInput, Grid,
 } from "@mantine/core";
 import { IconAlertCircle, IconArrowLeft, IconDeviceFloppy, IconTrash } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
@@ -251,14 +251,22 @@ export default function ResourceForm({
   }
 
   function renderFieldsBlock(fieldList: FieldDef[]) {
+    // Mantine 9's Grid is more reliable than SimpleGrid for this case —
+    // the latter occasionally collapsed inputs on top of each other inside
+    // a `withBorder` Paper because some children rendered shadow DOM with
+    // their own positioning. Explicit `Grid.Col span` also lets full-width
+    // widgets (textareas, statusbars) span both columns deterministically.
     return (
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm" verticalSpacing="sm">
-        {fieldList.map((f) => (
-          <div key={f.key} style={{ gridColumn: f.type === "textarea" ? "span 2" : undefined }}>
-            {renderField(f)}
-          </div>
-        ))}
-      </SimpleGrid>
+      <Grid gutter="sm" align="flex-start">
+        {fieldList.map((f) => {
+          const fullWidth = f.type === "textarea" || f.uiWidget === "statusbar";
+          return (
+            <Grid.Col key={f.key} span={{ base: 12, md: fullWidth ? 12 : 6 }}>
+              {renderField(f)}
+            </Grid.Col>
+          );
+        })}
+      </Grid>
     );
   }
 
@@ -338,9 +346,33 @@ export default function ResourceForm({
 
     setSaving(true);
     try {
+      // Per-field coercion before submit — Pydantic v2 doesn't accept
+      // ambiguous values:
+      //   * `Optional[UUID4]` / `Optional[date]` / `Optional[Decimal]`
+      //     reject empty strings, so empty many2one / date / number /
+      //     monetary inputs must be sent as `null`.
+      //   * Plain `str` fields stay as "" — sending `null` would fail
+      //     validation with "Input should be a valid string".
+      //   * `tags` (list[str]) must never be `null` — always an array.
+      const fieldByKey = new Map(fields.map((f) => [f.key, f]));
+      const isNullableType = (t?: FieldDef["type"]): boolean =>
+        t === "many2one" || t === "date" || t === "number" || t === "monetary" || t === "select";
+
+      const payload = Object.fromEntries(
+        Object.entries(values).map(([key, raw]) => {
+          const f = fieldByKey.get(key);
+          if (f?.type === "tags") {
+            return [key, Array.isArray(raw) ? raw : []];
+          }
+          if (raw === undefined) return [key, null];
+          if (raw === "" && isNullableType(f?.type)) return [key, null];
+          return [key, raw];
+        })
+      );
+
       const { data } = isEdit
-        ? await api.put(`/${resource}/${recordId}`, values, { skipGlobalErrorToast: true })
-        : await api.post(`/${resource}`, values, { skipGlobalErrorToast: true });
+        ? await api.put(`/${resource}/${recordId}`, payload, { skipGlobalErrorToast: true })
+        : await api.post(`/${resource}`, payload, { skipGlobalErrorToast: true });
 
       notifications.show({
         title: isEdit ? "Saved" : "Created",

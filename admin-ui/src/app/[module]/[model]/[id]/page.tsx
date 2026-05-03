@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { getCachedUiConfig, findModel, modelToFormStructure, type FormPanels } from "@/lib/modelConfig";
 import ResourceForm, { type FieldDef } from "@/components/ResourceForm";
 import { Loader, Center } from "@mantine/core";
@@ -8,15 +8,18 @@ interface Params { module: string; model: string; id: string; }
 
 const FALLBACK: FieldDef[] = [{ key: "name", label: "Name", type: "text", required: true }];
 
-export default function DynamicEditPage({ params }: { params: Params }) {
-  const { module: mod, model, id } = params;
+// Next 16 made route params async (see /[module]/[model]/page.tsx for details).
+export default function DynamicEditPage({ params }: { params: Promise<Params> }) {
+  const { module: mod, model, id } = use(params);
   const resource = `${mod}/${model}`;
   const title = model.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const [form, setForm] = useState<{ fields: FieldDef[]; panels?: FormPanels } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     getCachedUiConfig()
       .then((cfg) => {
+        if (cancelled) return;
         const m = findModel(cfg, mod, model);
         if (m && m.fields.length > 0) {
           setForm(modelToFormStructure(m));
@@ -24,7 +27,10 @@ export default function DynamicEditPage({ params }: { params: Params }) {
           setForm({ fields: FALLBACK });
         }
       })
-      .catch(() => setForm({ fields: FALLBACK }));
+      .catch(() => {
+        if (!cancelled) setForm({ fields: FALLBACK });
+      });
+    return () => { cancelled = true; };
   }, [mod, model]);
 
   if (form === null) return <Center h={200}><Loader color="gray" size="sm" /></Center>;
