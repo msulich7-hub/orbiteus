@@ -83,14 +83,16 @@
 
 ## 7. Wave 6 — Operational hardening
 
-- [ ] 7.1 Liveness + readiness endpoints
-- [ ] 7.2 Prometheus exporter (`prometheus_client`)
-- [ ] 7.3 Structured JSON logger with `request_id`, `tenant_id`, `actor`
+- [x] 7.1 Liveness + readiness endpoints (`/api/health/{live,ready}`)
+- [x] 7.2 Prometheus exporter (`prometheus_client`) at `/metrics`
+- [x] 7.3 Structured JSON logger with `request_id` (tenant_id/user_id ctx wired in later waves)
 - [ ] 7.4 OpenTelemetry instrumentation (opt-in)
-- [ ] 7.5 PgBouncer in compose → ADR-0012
-- [ ] 7.6 Gunicorn + UvicornWorker in production Dockerfile → ADR-0011
+- [x] 7.5 PgBouncer in compose → ADR-0012
+- [x] 7.6 Gunicorn + UvicornWorker in production Dockerfile → ADR-0011
 - [ ] 7.7 Backup container running `pg_dump` cron to S3
 - [ ] 7.8 Sentinel / Cluster fallback documented (deferred)
+- [x] 7.9 One-shot `migrate` service in compose
+- [x] 7.10 Alembic `pg_advisory_lock` helper
 
 ## 8. Test coverage gates
 

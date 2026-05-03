@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03.
+> Last reviewed: 2026-05-03 (after PR 2 — `feat/prod-stack-and-hygiene`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -41,12 +41,16 @@
 | **Aggregate endpoint** | MISSING | — | needed for AI dashboard |
 | **CSV import/export** | MISSING | — | core wave 3 |
 | **Server actions / cron exec** | STUB | `IrCron` + Temporal stub | replace with Celery Beat |
-| **Cache abstraction (Redis)** | MISSING | — | core wave 2 |
-| **Realtime (SSE) + Pub/Sub backplane** | MISSING | — | core wave 2 |
-| **PgBouncer integration** | MISSING | — | core wave 2 |
-| **Gunicorn + UvicornWorker entrypoint** | MISSING | uvicorn only | core wave 2 |
-| **Migrate one-shot service** | MISSING | runs in entrypoint | core wave 2 |
-| **Celery 5 + Beat** | MISSING | Temporal stub | core wave 2 |
+| **Cache abstraction (Redis)** | PARTIAL | `redis-py` dep + `REDIS_URL` env wired in compose | abstraction lib in PR 6 |
+| **Realtime (SSE) + Pub/Sub backplane** | MISSING | — | PR 7 |
+| **PgBouncer integration** | DONE (compose) | `docker-compose.prod.yml`, transaction mode | runtime test in PR 7 |
+| **Gunicorn + UvicornWorker entrypoint** | DONE | `backend/entrypoint.sh`, `Dockerfile.prod` | — |
+| **Migrate one-shot service** | DONE | `entrypoint-migrate.sh`, prod compose `migrate` service | — |
+| **Celery 5 + Beat** | STUB | placeholder services in prod compose | real impl in PR 5 |
+| **Health endpoints** | DONE | `orbiteus_core/health.py` (`/api/health/{live,ready}`) | — |
+| **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` | series expanded in PR 13 |
+| **JSON logging + request_id** | DONE | `orbiteus_core/observability/{logging,middleware}.py` | tenant_id/user_id ctx wired in PR 6 |
+| **Alembic advisory lock helper** | DONE | `orbiteus_core/alembic_lock.py` | applied in next migration |
 | **AI providers (Anthropic/OpenAI/Ollama)** | MISSING | only Action resolver | core wave 4 |
 | **`ir_ai_credential` (BYOK)** | MISSING | — | core wave 4 |
 | **`AIModuleConfig` registry + `ai.py`** | MISSING | — | core wave 4 |
@@ -125,21 +129,24 @@ Status: **MISSING (not scaffolded)**. Wave 6.
 |---|---|---|
 | Backend smoke (auth, CRM, RBAC, registry, ui-config) | 9 | ≈ 30 tests, real Postgres |
 | Frontend unit | 1 (`viewParser.test.ts`) | low |
-| Docs (new) | `tests/test_docs.py` | 12 tests, all green |
+| Docs | `tests/test_docs.py` | 12 tests, green |
+| Observability | `tests/test_observability.py` | 6 tests, green |
+| Compose | `tests/test_compose.py` | 9 tests, green |
+| Dockerfile prod | `tests/test_dockerfile_prod.py` | 6 tests, green |
 | E2E | none | needed before v1.0 |
 
 ## Summary score against documentation
 
 | Layer | Coverage of "to-be" docs |
 |---|---|
-| `orbiteus_core` framework | ~45% |
+| `orbiteus_core` framework | ~55% (PR 2: health, metrics, JSON logs, alembic lock done) |
 | `modules/base` | ~60% (system tables, no audit/outbox/embed/credential) |
 | `modules/auth` | ~70% |
 | `modules/crm` | ~50% (rename pending) |
 | Admin UI | ~55% (renderer works, AI + widgets missing) |
 | Portal UI | 0% |
-| Infrastructure | ~40% (dev compose works, prod incomplete) |
-| Observability / rate limit / backups / GDPR | 0% (docs only) |
+| Infrastructure | ~75% (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate service) |
+| Observability / rate limit / backups / GDPR | ~20% (logs + metrics + health done; rate limit + backups + GDPR pending) |
 
 ## What "core 100% closed" means
 

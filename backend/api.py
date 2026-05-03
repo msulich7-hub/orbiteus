@@ -12,9 +12,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from orbiteus_core.config import settings
+from orbiteus_core.health import router as health_router
+from orbiteus_core.observability import (
+    RequestIdMiddleware,
+    configure_json_logging,
+    metrics_endpoint,
+)
 from orbiteus_core.registry import registry
 
-logging.basicConfig(level=logging.INFO)
+# Structured JSON logs with request_id correlation (docs/29-observability.md).
+configure_json_logging(level="INFO" if not settings.debug else "DEBUG")
 logger = logging.getLogger(__name__)
 
 _BRANDING_DEFAULTS = [
@@ -221,6 +228,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Request-id, access log, Prometheus counters/histograms (docs/29).
+    app.add_middleware(RequestIdMiddleware)
+
+    # Health and metrics endpoints
+    app.include_router(health_router)
+    app.add_api_route("/metrics", metrics_endpoint, methods=["GET"], include_in_schema=False)
 
     # ---------------------------------------------------------------------------
     # Register modules (order matters for depends_on – registry sorts them)

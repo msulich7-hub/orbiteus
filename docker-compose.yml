@@ -1,6 +1,18 @@
+# Dev compose. One command: `docker compose up --build`.
+#
+# - Postgres image includes pgvector (docs/adr/0005).
+# - Redis 7 alongside (cache, broker, pubsub backplane).
+# - Backend runs uvicorn with reload (USE_GUNICORN=0).
+# - Migrations run inline at backend start (RUN_MIGRATIONS=1).
+# - Optional services live behind compose profiles:
+#     `worker` (Celery workers — added in PR 5)
+#     `monitor` (Prometheus + Grafana — added in PR 13)
+#
+# For production-grade single-host deployments use docker-compose.prod.yml.
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: orbiteus
       POSTGRES_PASSWORD: orbiteus
@@ -10,9 +22,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orbiteus"]
+      test: ["CMD-SHELL", "pg_isready -U orbiteus -d orbiteus"]
       interval: 5s
       timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 10
 
   backend:
@@ -23,14 +48,21 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://orbiteus:orbiteus@postgres:5432/orbiteus
-      SECRET_KEY: change-me-in-production
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: change-me-in-development
+      AI_SECRET_KEY: change-me-in-development
       ENVIRONMENT: development
+      DEBUG: "true"
+      RUN_MIGRATIONS: "1"
+      USE_GUNICORN: "0"
+      UVICORN_RELOAD: "1"
     volumes:
       - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["--reload"]
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
@@ -39,7 +71,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Internal Docker network URL — Next.js rewrites use this server-side
       BACKEND_URL: http://backend:8000
     volumes:
       - ./admin-ui:/app
@@ -51,3 +82,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
