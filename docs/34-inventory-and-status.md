@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 10 — `feat/admin-ui-monorepo-cleanup`).
+> Last reviewed: 2026-05-03 (after PR 12 — `feat/portal-ui-and-shared-link`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -106,7 +106,15 @@
 
 ## Portal UI (`portal-ui/`)
 
-Status: **MISSING (not scaffolded)**. Wave 6.
+| Concern | Status | Path |
+|---|---|---|
+| App scaffold (Next.js 14 + Mantine + workspaces) | DONE | `portal-ui/` |
+| Production Dockerfile | DONE | `portal-ui/Dockerfile.prod` |
+| Share-link landing `/s/[token]` | DONE | exchanges via `/api/portal/exchange` |
+| Backend `POST /api/auth/share` | DONE | `modules/auth/controller/router.py`; portal scope JWT |
+| Backend `GET /api/portal/exchange` | DONE | `orbiteus_core/portal_router.py` |
+| Compose service `portal` | DONE | `docker-compose.prod.yml` |
+| Comments + limited actions surface | NEXT PASS | basic exchange + read works; mutations TBD |
 
 ## Infrastructure
 

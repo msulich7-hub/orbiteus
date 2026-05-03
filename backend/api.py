@@ -245,6 +245,10 @@ def create_app() -> FastAPI:
     register_realtime_publishers()
     app.include_router(realtime_router)
 
+    # External portal (share-link exchange). PR 12 / ADR-0007.
+    from orbiteus_core.portal_router import router as portal_router
+    app.include_router(portal_router)
+
     # AI-native layer — Command Palette endpoint
     from orbiteus_core.ai.router import router as ai_router
     app.include_router(ai_router)

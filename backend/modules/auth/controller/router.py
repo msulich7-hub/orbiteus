@@ -28,6 +28,45 @@ _RATE_LIMIT_LOCK = Lock()
 
 
 # ---------------------------------------------------------------------------
+# Share-link endpoint (portal scope) — PR 12 / ADR-0007.
+# ---------------------------------------------------------------------------
+
+@router.post("/share")
+async def issue_share_link(
+    body: dict,
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Mint a portal-scoped JWT for a single resource.
+
+    Body:
+        {
+          "resource_model": "crm.lead",
+          "resource_id": "<uuid>",
+          "permissions": ["read", "comment"],
+          "ttl_days": 7
+        }
+    """
+    from orbiteus_core import sharing
+
+    if ctx.tenant_id is None or ctx.user_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+
+    try:
+        token = sharing.issue(
+            resource_model=str(body["resource_model"]),
+            resource_id=uuid.UUID(str(body["resource_id"])),
+            tenant_id=ctx.tenant_id,
+            issued_by=ctx.user_id,
+            permissions=list(body.get("permissions") or ["read"]),
+            ttl_days=int(body.get("ttl_days") or 7),
+        )
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {"token": token}
+
+
+# ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
 

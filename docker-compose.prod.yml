@@ -158,6 +158,18 @@ services:
       - backend
     restart: unless-stopped
 
+  portal:
+    build:
+      context: ./portal-ui
+      dockerfile: Dockerfile.prod
+      args:
+        BACKEND_URL: http://backend:8000
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   nginx:
     image: nginx:1.27-alpine
     ports:
