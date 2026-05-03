@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 7 — `feat/realtime-sse`).
+> Last reviewed: 2026-05-03 (after PR 8 — `feat/ai-layer-byok`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -53,11 +53,11 @@
 | **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` | series expanded in PR 13 |
 | **JSON logging + request_id** | DONE | `orbiteus_core/observability/{logging,middleware}.py` | tenant_id/user_id ctx wired in PR 6 |
 | **Alembic advisory lock helper** | DONE | `orbiteus_core/alembic_lock.py` | applied in next migration |
-| **AI providers (Anthropic/OpenAI/Ollama)** | MISSING | only Action resolver | core wave 4 |
-| **`ir_ai_credential` (BYOK)** | MISSING | — | core wave 4 |
-| **`AIModuleConfig` registry + `ai.py`** | MISSING | — | core wave 4 |
-| **pgvector + `ir_embedding`** | MISSING | — | core wave 4 |
-| **`/api/ai/chat`, `/dashboard`** | MISSING | — | core wave 4 |
+| **AI providers (Anthropic/OpenAI/Ollama)** | DONE | `orbiteus_core/ai/providers/{base,anthropic,openai,ollama}.py` | provider ABC + ping/chat/embed |
+| **`ir_ai_credential` (BYOK)** | DONE | table + Fernet at-rest + `ai/keys.py` + `POST/GET/DELETE /api/ai/credentials` | unique (tenant, provider) |
+| **`AIModuleConfig` registry + `ai.py`** | DONE | `orbiteus_core/ai/config.py` (AIRegistry singleton) | per-module declarative AI surface |
+| **pgvector + `ir_embedding`** | DONE | extension + `ir_embeddings` table with `vector(1536)` + HNSW index | embedding refresh via Outbox in next pass |
+| **`/api/ai/chat`, `/dashboard`** | DONE | non-streaming chat with tool calling + budget guard + redaction; dashboard endpoint scaffolded | streaming + AI dashboard exec in PR 11 |
 | **Field-level RBAC** | MISSING | — | post-v1.0 |
 | **Multi-company switch endpoint** | MISSING | — | post-v1.0 |
 | **PDF reports** | MISSING | — | post-v1.0 |

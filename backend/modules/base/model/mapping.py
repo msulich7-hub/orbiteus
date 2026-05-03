@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     JSON,
+    LargeBinary,
     String,
     Table,
     Text,
@@ -29,10 +30,12 @@ from modules.base.model.domain import (
     Company,
     IrActionServer,
     IrActionWindow,
+    IrAiCredential,
     IrAttachment,
     IrAuditLog,
     IrConfigParam,
     IrCron,
+    IrEmbedding,
     IrMailTemplate,
     IrModel,
     IrModelAccess,
@@ -346,6 +349,40 @@ ir_webhooks_table = Table(
 )
 
 
+# AI BYOK credentials. `secret_encrypted` is Fernet ciphertext.
+# A unique constraint on (tenant_id, provider) is created in the migration.
+ir_ai_credentials_table = Table(
+    "ir_ai_credentials",
+    metadata,
+    *make_system_columns(),
+    Column("tenant_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("provider", String(50), nullable=False),
+    Column("secret_encrypted", LargeBinary, nullable=False),
+    Column("model_default", String(255), nullable=True),
+    Column("is_active", Boolean, nullable=False, server_default="true"),
+    Column("monthly_token_budget", Integer, nullable=True),
+    Column("usage_tokens", Integer, nullable=False, server_default="0"),
+)
+
+
+# pgvector embeddings store. The `vector` column type is registered when the
+# extension is installed (see migrations); we declare it as `Text` here for
+# environments that don't have pgvector loaded yet — production migration
+# upgrades it to `vector(N)` with an HNSW index.
+ir_embeddings_table = Table(
+    "ir_embeddings",
+    metadata,
+    *make_system_columns(),
+    Column("tenant_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("model", String(255), nullable=False, index=True),
+    Column("record_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("provider", String(50), nullable=False),
+    Column("model_name", String(255), nullable=False),
+    Column("dim", Integer, nullable=False, server_default="0"),
+    Column("vector", Text, nullable=True),
+)
+
+
 # ---------------------------------------------------------------------------
 # Register imperative mappings
 # ---------------------------------------------------------------------------
@@ -372,6 +409,8 @@ def setup() -> None:
     register_mapping(IrAuditLog, ir_audit_log_table)
     register_mapping(IrOutbox, ir_outbox_table)
     register_mapping(IrWebhook, ir_webhooks_table)
+    register_mapping(IrAiCredential, ir_ai_credentials_table)
+    register_mapping(IrEmbedding, ir_embeddings_table)
 
     _register_auto_crud()
 

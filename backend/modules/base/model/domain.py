@@ -310,3 +310,36 @@ class IrWebhook(BaseModel):
     is_active: bool = True
     last_delivery_at: datetime | None = None
     last_delivery_status: str = ""
+
+
+# ---------------------------------------------------------------------------
+# AI layer (PR 8) — BYOK credentials, embeddings, prompts/dashboards.
+# See docs/15-ai-layer.md and ADR-0004 / ADR-0005 / ADR-0009.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class IrAiCredential(SystemModel):
+    """Per-tenant AI provider credential (BYOK, Fernet-encrypted at rest)."""
+
+    tenant_id: uuid.UUID | None = None
+    provider: str = "anthropic"      # "anthropic" | "openai" | "ollama"
+    secret_encrypted: bytes = b""    # Fernet ciphertext of the API key
+    model_default: str = ""          # e.g. "claude-3-5-sonnet"
+    is_active: bool = True
+    monthly_token_budget: int | None = None
+    usage_tokens: int = 0
+
+
+@dataclass
+class IrEmbedding(SystemModel):
+    """pgvector row keyed by (tenant_id, model, record_id, provider, model_name)."""
+
+    tenant_id: uuid.UUID | None = None
+    model: str = ""                  # e.g. "crm.lead"
+    record_id: uuid.UUID | None = None
+    provider: str = ""
+    model_name: str = ""             # provider-side model used for embedding
+    dim: int = 0
+    # `vector` column is an actual pgvector value; we leave it as bytes-ish here
+    # so callers that don't load pgvector still see the dataclass shape.
+    vector: Any = None

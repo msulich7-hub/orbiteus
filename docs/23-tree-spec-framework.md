@@ -48,19 +48,19 @@
 
 ## 4. Wave 3 — AI layer (engine baseline)
 
-- [ ] 4.1 Provider ABC + Anthropic + OpenAI + Ollama implementations → ADR-0009
-- [ ] 4.2 `ir_ai_credential` table + Fernet at-rest encryption → ADR-0004
-- [ ] 4.3 BYOK CRUD endpoints (`POST/GET/DELETE /api/ai/credentials`)
-- [ ] 4.4 Provider ping on credential creation
-- [ ] 4.5 `AIModuleConfig` + `AIRegistry` (per-module `ai.py`)
-- [ ] 4.6 `AIContextBuilder` (RBAC-scoped tools and data)
-- [ ] 4.7 Tools: ActionTool, QueryTool, semantic_search → ADR-0005
-- [ ] 4.8 `pgvector` extension + `ir_embedding` table + HNSW index
-- [ ] 4.9 Outbox-driven embedding refresh on `record.{created,updated,deleted}`
-- [ ] 4.10 `/api/ai/chat` endpoint (streaming with provider tool calling)
-- [ ] 4.11 `/api/ai/dashboard` endpoint (NL → aggregate query → chart spec)
-- [ ] 4.12 Budget guard (`ai:budget:tenant:{id}:{yyyymm}` in Redis)
-- [ ] 4.13 PII redaction pipeline before remote provider calls
+- [x] 4.1 Provider ABC + Anthropic + OpenAI + Ollama implementations → ADR-0009 — PR 8
+- [x] 4.2 `ir_ai_credential` table + Fernet at-rest encryption → ADR-0004 — PR 8
+- [x] 4.3 BYOK CRUD endpoints (`POST/GET/DELETE /api/ai/credentials`) — PR 8
+- [x] 4.4 Provider ping on credential creation — PR 8
+- [x] 4.5 `AIModuleConfig` + `AIRegistry` (per-module `ai.py`) — PR 8
+- [ ] 4.6 `AIContextBuilder` (RBAC-scoped tools and data) — wired via `tools.build_tools` in PR 8; advanced scoping in PR 11
+- [x] 4.7 Tools: ActionTool, QueryTool, semantic_search → ADR-0005 — PR 8
+- [x] 4.8 `pgvector` extension + `ir_embedding` table + HNSW index — PR 8
+- [ ] 4.9 Outbox-driven embedding refresh on `record.{created,updated,deleted}` — next pass
+- [x] 4.10 `/api/ai/chat` endpoint (non-streaming MVP; streaming in PR 11) — PR 8
+- [x] 4.11 `/api/ai/dashboard` endpoint (scaffolded chart spec; AI exec in PR 11) — PR 8
+- [x] 4.12 Budget guard (`ai:budget:tenant:{id}:{yyyymm}` in Redis) — PR 8
+- [x] 4.13 PII redaction pipeline before remote provider calls — PR 8
 
 ## 5. Wave 4 — Canonical CRM
 
