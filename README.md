@@ -59,7 +59,7 @@ Default login: `admin@example.com` / `admin1234`
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.12 + FastAPI + SQLAlchemy 2.0 (async) |
+| Backend | Python 3.13 + FastAPI + SQLAlchemy 2.0 (async) |
 | Database | PostgreSQL 16 |
 | Migrations | Alembic (auto-applied at startup) |
 | Auth | JWT (python-jose) + bcrypt |

@@ -13,7 +13,7 @@ You are an engineer working on **Orbiteus**, an AI-native engine for building
 business applications and internal AI agents. Orbiteus is a **modular monolith**
 with three deployment artifacts:
 
-- `backend/` — FastAPI (Python 3.12) + PostgreSQL + Redis
+- `backend/` — FastAPI (Python 3.13) + PostgreSQL + Redis
 - `admin-ui/` — Next.js 14 + Mantine 8 (internal users)
 - `portal-ui/` — Next.js 14 + Mantine 8 (external users / partners, RBAC scope: `portal`)
 
@@ -76,7 +76,7 @@ product example* (CRM-MVP) that demonstrates the platform.
 This list is binding. Anything outside it requires an ADR.
 
 ### Backend
-- Python 3.12+, FastAPI, **Gunicorn + UvicornWorker** (production server)
+- Python 3.13+, FastAPI, **Gunicorn + UvicornWorker** (production server)
 - SQLAlchemy 2 (imperative mapping), asyncpg, **Alembic** (migrations)
 - **PgBouncer** in transaction pooling mode in front of PostgreSQL
 - Pydantic v2, pydantic-settings

@@ -18,7 +18,9 @@ services:
       POSTGRES_PASSWORD: orbiteus
       POSTGRES_DB: orbiteus
     ports:
-      - "5432:5432"
+      # Default 5432 (professional). Override locally if your host already
+      # runs Postgres: `POSTGRES_HOST_PORT=5433 docker compose up`.
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -31,7 +33,9 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      # Default 6379 (professional). Override locally if your host already
+      # runs Redis: `REDIS_HOST_PORT=6380 docker compose up`.
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

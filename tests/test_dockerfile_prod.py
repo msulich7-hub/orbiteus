@@ -10,8 +10,9 @@ ENTRYPOINT_MIGRATE = REPO_ROOT / "backend" / "entrypoint-migrate.sh"
 PYPROJECT = REPO_ROOT / "backend" / "pyproject.toml"
 
 
-def test_dockerfile_prod_uses_python_3_12():
-    assert "python:3.12-slim" in BACKEND_DOCKERFILE_PROD.read_text()
+def test_dockerfile_prod_uses_latest_stable_python():
+    """We pin to python:3.13-slim — latest stable as of 2026-05."""
+    assert "python:3.13-slim" in BACKEND_DOCKERFILE_PROD.read_text()
 
 
 def test_dockerfile_prod_exposes_8000():
