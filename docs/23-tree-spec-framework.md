@@ -35,11 +35,11 @@
 
 ## 3. Wave 2 — Cross-cutting infra
 
-- [ ] 3.1 Redis cache layer abstraction → ADR-0003
-- [ ] 3.2 Move RBAC cache from in-memory to Redis
-- [ ] 3.3 JWT `jti` revocation list in Redis
-- [ ] 3.4 Idempotency keys in Redis
-- [ ] 3.5 Rate limit token buckets (tenant / user / IP)
+- [x] 3.1 Redis cache layer abstraction → ADR-0003 — PR 6
+- [ ] 3.2 Move RBAC cache from in-memory to Redis (next pass)
+- [x] 3.3 JWT `jti` revocation list in Redis — PR 6
+- [ ] 3.4 Idempotency keys in Redis (next pass)
+- [x] 3.5 Rate limit token buckets (per-IP active, tenant/user wiring next pass) — PR 6
 - [x] 3.6 Celery 5 + Beat → ADR-0013, ADR-0015 — PR 5
 - [x] 3.7 Outbox drainer Celery task with retry + dead-letter — PR 5
 - [ ] 3.8 Realtime: SSE endpoint `/api/realtime/subscribe`

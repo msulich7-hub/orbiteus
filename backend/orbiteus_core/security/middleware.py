@@ -34,12 +34,33 @@ async def get_current_context(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # JWT revocation list (Redis); short-circuits compromised / logged-out tokens
+    # before TTL.
+    jti = payload.get("jti")
+    if jti:
+        try:
+            from orbiteus_core.security.jti import is_revoked
+            if await is_revoked(jti):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token revoked",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            # Redis outage must not lock everyone out — log and proceed.
+            import logging
+            logging.getLogger(__name__).warning("jti revocation check failed (open-fail)")
+
     return RequestContext(
         user_id=uuid.UUID(payload["sub"]),
         tenant_id=uuid.UUID(payload["tenant_id"]) if payload.get("tenant_id") else None,
         company_id=uuid.UUID(payload["company_id"]) if payload.get("company_id") else None,
         roles=payload.get("roles", []),
         is_superadmin=payload.get("is_superadmin", False),
+        actor="user",
+        scope=payload.get("scope", "internal"),
     )
 
 

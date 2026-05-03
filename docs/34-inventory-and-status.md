@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 5 — `feat/celery-worker`).
+> Last reviewed: 2026-05-03 (after PR 6 — `feat/redis-cache-and-rate-limit`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -21,8 +21,8 @@
 | BaseRepository (tenant filter, RBAC, soft delete, hooks, audit, attribution) | DONE | `repository.py` | extended in PR 3 |
 | AutoRouter (5 CRUD endpoints) | DONE | `auto_router.py` | — |
 | ui-config builder | DONE | `ui_config.py` | needs `relation` for many2one |
-| RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | in-memory dict; needs Redis (ADR-0003) |
-| JWT + bcrypt | DONE | `security/{tokens,passwords}.py` | TTL 60min; needs 15min + jti revocation |
+| RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | Redis cache abstraction available (PR 6); RBAC migration to Redis remaining |
+| JWT + bcrypt | DONE | `security/{tokens,passwords,jti,rate_limit}.py` | 15min/7d, jti revocation list, refresh rotation flag — PR 6 |
 | TOTP 2FA | DONE | `security/tokens.py` | recovery codes MISSING |
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
@@ -42,7 +42,8 @@
 | **Aggregate endpoint** | MISSING | — | needed for AI dashboard |
 | **CSV import/export** | MISSING | — | core wave 3 |
 | **Server actions / cron exec** | STUB | `IrCron` + Temporal stub | replace with Celery Beat |
-| **Cache abstraction (Redis)** | PARTIAL | `redis-py` dep + `REDIS_URL` env wired in compose | abstraction lib in PR 6 |
+| **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
+| **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` | per-IP active; tenant/user buckets ready to wire post-auth |
 | **Realtime (SSE) + Pub/Sub backplane** | MISSING | — | PR 7 |
 | **PgBouncer integration** | DONE (compose) | `docker-compose.prod.yml`, transaction mode | runtime test in PR 7 |
 | **Gunicorn + UvicornWorker entrypoint** | DONE | `backend/entrypoint.sh`, `Dockerfile.prod` | — |

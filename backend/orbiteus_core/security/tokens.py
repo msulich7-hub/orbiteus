@@ -1,6 +1,14 @@
-"""JWT token creation and validation."""
+"""JWT token creation and validation.
+
+PR 6 changes:
+- Access TTL default 15 min (was 60). Configurable via env.
+- Refresh TTL default 7 days (was 30). Configurable via env.
+- Every token carries a `jti` (JWT ID) used by the Redis revocation list.
+- Refresh tokens rotate on use — the old `jti` lands in the blacklist.
+"""
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -9,19 +17,25 @@ from jose import JWTError, jwt
 from orbiteus_core.config import settings
 
 
+def _new_jti() -> str:
+    return uuid.uuid4().hex
+
+
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
-    payload = data.copy()
+    payload = dict(data)
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
+    payload.setdefault("jti", _new_jti())
     payload["exp"] = expire
     payload["type"] = "access"
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
 def create_refresh_token(data: dict[str, Any]) -> str:
-    payload = data.copy()
+    payload = dict(data)
     expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    payload.setdefault("jti", _new_jti())
     payload["exp"] = expire
     payload["type"] = "refresh"
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)

@@ -232,6 +232,11 @@ def create_app() -> FastAPI:
     # Request-id, access log, Prometheus counters/histograms (docs/29).
     app.add_middleware(RequestIdMiddleware)
 
+    # IP rate limit (PR 6). Tenant/user buckets are checked deeper in the stack
+    # because JWT is decoded later (security.middleware).
+    from orbiteus_core.security.rate_limit_middleware import RateLimitMiddleware
+    app.add_middleware(RateLimitMiddleware)
+
     # Health and metrics endpoints
     app.include_router(health_router)
     app.add_api_route("/metrics", metrics_endpoint, methods=["GET"], include_in_schema=False)

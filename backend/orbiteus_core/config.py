@@ -12,12 +12,21 @@ class Settings(BaseSettings):
     # Auth
     secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
-    refresh_token_expire_days: int = 30
+    access_token_expire_minutes: int = 15      # PR 6 — was 60; tighter blast radius
+    refresh_token_expire_days: int = 7         # PR 6 — was 30; aligns with rotation
+    refresh_token_rotate_on_use: bool = True
 
-    # Temporal
-    temporal_host: str = "localhost:7233"
-    temporal_namespace: str = "default"
+    # Redis (cache, jti revocation, rate limit, pubsub backplane).
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Rate limit defaults (per minute). Override in production via env.
+    rate_limit_tenant_per_minute: int = 1000
+    rate_limit_user_per_minute: int = 60
+    rate_limit_ip_per_minute: int = 120
+    rate_limit_anonymous_per_minute: int = 30
+
+    # AI provider key encryption (Fernet) — used in PR 8.
+    ai_secret_key: str = "change-me-with-fernet-key"
 
     # App
     app_name: str = "Orbiteus"
