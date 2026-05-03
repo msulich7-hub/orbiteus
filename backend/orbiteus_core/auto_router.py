@@ -195,7 +195,12 @@ def build_crud_router(model_name: str) -> APIRouter | None:
         session: AsyncSession = Depends(get_session),
         ctx: RequestContext = Depends(require_auth),
     ):
-        body = write_schema.model_validate(await request.json())
+        from pydantic import ValidationError
+
+        try:
+            body = write_schema.model_validate(await request.json())
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=exc.errors()) from exc
         repo = repo_class(session, ctx)
         try:
             obj = await repo.create(body.model_dump(exclude_unset=True))

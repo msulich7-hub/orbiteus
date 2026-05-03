@@ -88,6 +88,9 @@ async def enqueue(
 
     row_id = uuid.uuid4()
     now = datetime.now(timezone.utc)
+    # `next_run_at` is a String(50) (Postgres VARCHAR) so the drainer can do
+    # cheap text comparisons; coerce to ISO 8601 here.
+    next_run_iso = (not_before or now).isoformat()
     stmt = insert(ir_outbox_table).values(
         id=row_id,
         create_date=now,
@@ -99,7 +102,7 @@ async def enqueue(
         target_kind=target_kind,
         target_ref=target_ref,
         retries=0,
-        next_run_at=not_before or now,
+        next_run_at=next_run_iso,
         last_error=None,
     )
     await session.execute(stmt)
