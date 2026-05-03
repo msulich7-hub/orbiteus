@@ -2,18 +2,33 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  SimpleGrid, Paper, Stack, Title, Text, Group, ThemeIcon, Loader, Alert, Button,
+  Alert,
+  Button,
+  Group,
+  Loader,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Text,
+  ThemeIcon,
+  Title,
 } from "@mantine/core";
 import {
-  IconUsers, IconBriefcase, IconTrendingUp, IconCash, IconTrophy,
+  IconBriefcase,
+  IconCash,
+  IconTrendingUp,
+  IconTrophy,
+  IconUsers,
 } from "@tabler/icons-react";
+import { AIDashboard, PromptInput } from "@orbiteus/ui";
+
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/formatters";
 
 interface CrmStats {
-  total_customers: number;
-  total_opportunities: number;
-  won_opportunities: number;
+  total_persons: number;
+  total_leads: number;
+  won_leads: number;
   pipeline_value: number;
   won_revenue: number;
 }
@@ -50,39 +65,39 @@ export default function DashboardHome() {
 
   const cards = [
     {
-      label: "Customers",
-      value: String(stats.total_customers),
+      label: "Persons",
+      value: String(stats.total_persons),
       icon: IconUsers,
       color: "blue",
-      href: "/crm/customer",
+      href: "/crm/person",
     },
     {
-      label: "Open opportunities",
-      value: String(stats.total_opportunities),
+      label: "Open leads",
+      value: String(stats.total_leads),
       icon: IconBriefcase,
       color: "cyan",
-      href: "/crm/opportunity",
+      href: "/crm/lead",
     },
     {
-      label: "Won deals",
-      value: String(stats.won_opportunities),
+      label: "Won leads",
+      value: String(stats.won_leads),
       icon: IconTrophy,
       color: "green",
-      href: "/crm/opportunity",
+      href: "/crm/lead",
     },
     {
       label: "Pipeline value",
       value: formatMoney(stats.pipeline_value),
       icon: IconTrendingUp,
       color: "grape",
-      href: "/crm/opportunity",
+      href: "/crm/lead",
     },
     {
       label: "Won revenue",
       value: formatMoney(stats.won_revenue),
       icon: IconCash,
       color: "teal",
-      href: "/crm/opportunity",
+      href: "/crm/lead",
     },
   ] as const;
 
@@ -91,7 +106,8 @@ export default function DashboardHome() {
       <div>
         <Title order={3}>Dashboard</Title>
         <Text c="dimmed" size="sm" mt={4}>
-          Overview of your CRM — data from <Text span ff="monospace" size="xs">GET /api/crm/stats</Text>
+          Overview of your CRM — data from{" "}
+          <Text span ff="monospace" size="xs">GET /api/crm/stats</Text>
         </Text>
       </div>
 
@@ -124,9 +140,17 @@ export default function DashboardHome() {
       </SimpleGrid>
 
       <Paper p="md" withBorder radius="md">
+        <Text size="sm" fw={600} mb="xs">AI assistant</Text>
+        <PromptInput scope="module:crm" placeholder="Ask about your CRM…" />
+      </Paper>
+
+      <AIDashboard scope="module:crm" initialPrompt="Pipeline value by stage this quarter" />
+
+      <Paper p="md" withBorder radius="md">
         <Text size="sm" fw={600} mb="xs">Quick links</Text>
         <Group gap="sm">
-          <Button component={Link} href="/crm/pipeline" variant="default" size="xs">Pipelines</Button>
+          <Button component={Link} href="/crm/team" variant="default" size="xs">Sales teams</Button>
+          <Button component={Link} href="/crm/stage" variant="default" size="xs">Stages</Button>
           <Button component={Link} href="/base/company" variant="default" size="xs">Companies</Button>
           <Button component={Link} href="/base/user" variant="default" size="xs">Users</Button>
         </Group>

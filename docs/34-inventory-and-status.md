@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 9 — `feat/canonical-crm-rename`).
+> Last reviewed: 2026-05-03 (after PR 10 — `feat/admin-ui-monorepo-cleanup`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -88,15 +88,16 @@
 | ResourceGraph | PARTIAL | `components/ResourceGraph.tsx` | needs aggregate endpoint |
 | Command Palette ⌘K | DONE | `components/CommandPalette.tsx` | — |
 | Branding | DONE | `lib/branding.tsx` | — |
-| **Hardcoded CRM/base/technical pages** | TO DELETE | `app/{crm,base,technical}/*` | violates "zero TSX per module" |
+| **Hardcoded CRM/base/technical pages** | DELETED | catch-all `[module]/[model]` only | PR 10 |
 | **Many2one widget** | PARTIAL | `widgets/Many2OneField.tsx` | needs FK resolution from API |
 | **Badge widget** | PARTIAL | `widgets/StatusBadge.tsx` | not wired to lists |
 | **Monetary widget** | MISSING | — | core CRM-MVP |
 | **Statusbar widget** | PARTIAL | `widgets/StatusbarField.tsx` | not wired to lead.stage |
-| **`packages/ui` workspace** | MISSING | flat `admin-ui/` only | core wave 5 |
-| **`<PromptInput>`** | MISSING | — | core wave 5 |
-| **`<AIChatPanel>`** | MISSING | — | core wave 5 |
-| **`<AIDashboard>`** | MISSING | — | core wave 5 |
+| **`packages/ui` workspace** | DONE | npm workspaces + `packages/ui` consumed by admin-ui | PR 10 |
+| **`<PromptInput>`** | DONE | `packages/ui/src/ai/PromptInput.tsx` + `useAIContext` hook | PR 10 |
+| **`<AIChatPanel>`** | DONE | `packages/ui/src/ai/AIChatPanel.tsx` (Drawer) | PR 10 |
+| **`<AIDashboard>`** | DONE | `packages/ui/src/ai/AIDashboard.tsx` (recharts BarChart) | PR 10 |
+| **Shared widgets** | DONE | Badge, Monetary, Statusbar, Many2OneSelect, TagsField in `packages/ui/src/widgets/` | PR 10 |
 | **Toasts (success/error/403/404)** | PARTIAL | scattered | unify in `lib/api.ts` |
 | **Empty states + loading skeletons** | MISSING | — | polish phase |
 | **Polish strings** | LEAK | several files | EN-only cleanup |
