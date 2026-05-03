@@ -117,6 +117,15 @@ export default function LoginPage() {
   const [modules, setModules] = useState<UiModule[]>([]);
   const [metaLoading, setMetaLoading] = useState(true);
 
+  // SSR renders the relative "/api" string; the client swaps in the absolute
+  // URL after hydration to avoid a Next.js text mismatch warning.
+  const [apiBase, setApiBase] = useState<string>("/api");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setApiBase(`${window.location.origin}/api`);
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const v = localStorage.getItem(WELCOME_LS_KEY);
@@ -204,8 +213,7 @@ export default function LoginPage() {
     }
   }
 
-  const apiBase =
-    typeof window !== "undefined" ? `${window.location.origin}/api` : "/api";
+  // `apiBase` lives in state above to keep SSR and the client in sync.
 
   const hasBakedDemoCreds = Boolean(DEMO_EMAIL_PUBLIC && DEMO_PASSWORD_PUBLIC);
 
