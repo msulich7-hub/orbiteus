@@ -29,7 +29,7 @@ REQUIRED_TOP = [
     DOCS / "glossary.md",
 ]
 
-REQUIRED_NUMBERED = list(range(1, 34))  # 01..33
+REQUIRED_NUMBERED = list(range(1, 37))  # 01..36
 REQUIRED_ADR_IDS = list(range(1, 17))   # 0001..0016
 REQUIRED_ADR_TOP = [
     ADR / "README.md",

@@ -263,6 +263,9 @@ docs/30-rate-limiting.md        — token bucket per tenant/user/IP
 docs/31-backups-and-dr.md       — pg_dump, retention, RPO/RTO
 docs/32-multi-host-migration.md — when and how to leave compose
 docs/33-data-retention-and-gdpr.md — audit retention, anonymization, DSAR
+docs/34-inventory-and-status.md — code vs docs honest snapshot
+docs/35-core-definition-of-done.md — what "v1.0" means
+docs/36-development-plan.md     — step-by-step PR plan to v1.0
 docs/adr/                       — architectural decision records
 ```
 

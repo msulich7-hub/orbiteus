@@ -53,6 +53,9 @@ conventions, and decisions.
 | 31 | [`31-backups-and-dr.md`](./31-backups-and-dr.md) | pg_dump, retention, RPO/RTO |
 | 32 | [`32-multi-host-migration.md`](./32-multi-host-migration.md) | When to leave compose |
 | 33 | [`33-data-retention-and-gdpr.md`](./33-data-retention-and-gdpr.md) | Audit retention, anonymization, DSAR |
+| 34 | [`34-inventory-and-status.md`](./34-inventory-and-status.md) | Code vs docs honest snapshot |
+| 35 | [`35-core-definition-of-done.md`](./35-core-definition-of-done.md) | What "v1.0" means |
+| 36 | [`36-development-plan.md`](./36-development-plan.md) | Step-by-step PR plan to v1.0 |
 |    | [`adr/`](./adr/) | Architectural Decision Records |
 
 ## Conventions
