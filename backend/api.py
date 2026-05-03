@@ -255,6 +255,12 @@ def create_app() -> FastAPI:
     from orbiteus_core.outbox_dispatcher import register_dispatchers
     register_dispatchers()
 
+    # Wire the realtime publishers (PR 7 / ADR-0006, ADR-0014).
+    from orbiteus_core.realtime import register_realtime_publishers
+    from orbiteus_core.realtime_router import router as realtime_router
+    register_realtime_publishers()
+    app.include_router(realtime_router)
+
     # AI-native layer — Command Palette endpoint
     from orbiteus_core.ai.router import router as ai_router
     app.include_router(ai_router)

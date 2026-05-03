@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 6 — `feat/redis-cache-and-rate-limit`).
+> Last reviewed: 2026-05-03 (after PR 7 — `feat/realtime-sse`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -44,7 +44,7 @@
 | **Server actions / cron exec** | STUB | `IrCron` + Temporal stub | replace with Celery Beat |
 | **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
 | **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` | per-IP active; tenant/user buckets ready to wire post-auth |
-| **Realtime (SSE) + Pub/Sub backplane** | MISSING | — | PR 7 |
+| **Realtime (SSE) + Pub/Sub backplane** | DONE | `orbiteus_core/realtime.py` (publisher + topic helpers + SSE stream) and `realtime_router.py` (`/api/realtime/subscribe`); BaseRepository events bridged via Redis Pub/Sub | nginx config already has `proxy_buffering off` (PR 2) |
 | **PgBouncer integration** | DONE (compose) | `docker-compose.prod.yml`, transaction mode | runtime test in PR 7 |
 | **Gunicorn + UvicornWorker entrypoint** | DONE | `backend/entrypoint.sh`, `Dockerfile.prod` | — |
 | **Migrate one-shot service** | DONE | `entrypoint-migrate.sh`, prod compose `migrate` service | — |
@@ -140,14 +140,14 @@ Status: **MISSING (not scaffolded)**. Wave 6.
 
 | Layer | Coverage of "to-be" docs |
 |---|---|
-| `orbiteus_core` framework | ~55% (PR 2: health, metrics, JSON logs, alembic lock done) |
-| `modules/base` | ~60% (system tables, no audit/outbox/embed/credential) |
-| `modules/auth` | ~70% |
-| `modules/crm` | ~50% (rename pending) |
-| Admin UI | ~55% (renderer works, AI + widgets missing) |
+| `orbiteus_core` framework | ~80% (hooks, audit, eventbus, outbox, cache, jti, rate-limit, realtime done; AI + RBAC-on-Redis pending) |
+| `modules/base` | ~80% (audit_log + outbox + webhooks tables; AI credential + embedding tables pending) |
+| `modules/auth` | ~80% (15min/jti revocation in PR 6; share-link in PR 12) |
+| `modules/crm` | ~50% (rename pending in PR 9) |
+| Admin UI | ~55% (renderer works, AI + widgets + monorepo pending) |
 | Portal UI | 0% |
-| Infrastructure | ~75% (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate service) |
-| Observability / rate limit / backups / GDPR | ~20% (logs + metrics + health done; rate limit + backups + GDPR pending) |
+| Infrastructure | ~85% (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate, Celery worker+beat) |
+| Observability / rate limit / backups / GDPR | ~45% (logs + metrics + health + rate limit done; backups + GDPR pending) |
 
 ## What "core 100% closed" means
 

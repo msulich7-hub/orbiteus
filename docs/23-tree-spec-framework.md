@@ -42,9 +42,9 @@
 - [x] 3.5 Rate limit token buckets (per-IP active, tenant/user wiring next pass) — PR 6
 - [x] 3.6 Celery 5 + Beat → ADR-0013, ADR-0015 — PR 5
 - [x] 3.7 Outbox drainer Celery task with retry + dead-letter — PR 5
-- [ ] 3.8 Realtime: SSE endpoint `/api/realtime/subscribe`
-- [ ] 3.9 Realtime: Redis Pub/Sub backplane → ADR-0014
-- [ ] 3.10 Presence (`presence:topic:` sorted set in Redis)
+- [x] 3.8 Realtime: SSE endpoint `/api/realtime/subscribe` — PR 7
+- [x] 3.9 Realtime: Redis Pub/Sub backplane → ADR-0014 — PR 7
+- [ ] 3.10 Presence (`presence:topic:` sorted set in Redis) — next pass
 
 ## 4. Wave 3 — AI layer (engine baseline)
 
