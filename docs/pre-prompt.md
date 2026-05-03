@@ -198,6 +198,12 @@ in `bootstrap.py` of that module — never in `backend/api.py`.
   product names anywhere in tracked content.
 - The `<PromptInput>` widget from `packages/ui` is the canonical way to embed
   AI in any module page.
+- **Auth transport for the browser.** Admin UI uses an httpOnly session
+  cookie (`orbiteus_token`) set by `/api/auth/login`. Never store JWTs in
+  `localStorage` or `sessionStorage`. The Edge gate at
+  `admin-ui/src/proxy.ts` (Next 16) redirects unauthenticated requests to
+  `/login?next=<path>` *before* SSR — do not reintroduce a client-side
+  auth gate. See ADR 0017.
 
 ## 9. What to do when the user asks for X
 

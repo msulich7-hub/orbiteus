@@ -1,19 +1,28 @@
-"""FastAPI security middleware – tenant resolution, JWT auth, company context."""
+"""FastAPI security middleware – tenant resolution, JWT auth, company context.
+
+Token resolution order:
+  1. `Authorization: Bearer ...` header (machine clients, mobile apps).
+  2. `orbiteus_token` httpOnly cookie (browser SSR; preferred for admin/portal UI).
+
+See `docs/06-auth.md` and `docs/adr/0017-httponly-cookie-session.md`.
+"""
 from __future__ import annotations
 
 import uuid
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from orbiteus_core.context import RequestContext
+from orbiteus_core.security.cookies import ACCESS_COOKIE
 from orbiteus_core.security.tokens import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_context(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
 ) -> RequestContext:
     """FastAPI dependency – decode JWT and build RequestContext.
@@ -22,11 +31,18 @@ async def get_current_context(
     (public endpoints can allow it; protected ones should call
     require_auth() separately).
     """
-    if credentials is None:
+    raw_token: str | None = None
+    if credentials is not None and credentials.credentials:
+        raw_token = credentials.credentials
+    else:
+        # Fallback: httpOnly cookie set by the auth router.
+        raw_token = request.cookies.get(ACCESS_COOKIE) or None
+
+    if raw_token is None:
         return RequestContext()
 
     try:
-        payload = decode_access_token(credentials.credentials)
+        payload = decode_access_token(raw_token)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,6 +77,7 @@ async def get_current_context(
         is_superadmin=payload.get("is_superadmin", False),
         actor="user",
         scope=payload.get("scope", "internal"),
+        request_id=request.headers.get("x-request-id"),
     )
 
 

@@ -32,11 +32,28 @@
 
 ## Session model
 
-- **Stateless JWT.** No session cookies for `internal` or `ai` scope.
-- **Portal**: cookie + JWT hybrid acceptable for browser-only flows; CSRF
-  token required on state-changing requests when cookie auth is used.
+The browser-facing **Admin UI** uses an httpOnly cookie session driven by the
+backend; non-browser clients keep using `Authorization: Bearer …`. See
+[ADR 0017](./adr/0017-httponly-cookie-session.md) for the full rationale.
+
+- **Stateless JWT.** Tokens are unchanged; only the *transport* differs.
+- **Cookies** (set by `/api/auth/login`, `/api/auth/refresh`, cleared by
+  `/api/auth/logout`):
+  - `orbiteus_token`   — access JWT, `Path=/`, `HttpOnly`, `SameSite=Lax`,
+    `Secure` in production, TTL = 15 minutes.
+  - `orbiteus_refresh` — refresh JWT, `Path=/api/auth`, `HttpOnly`,
+    `SameSite=Lax`, `Secure` in production, TTL = 7 days.
+- **Resolution order** (`backend/orbiteus_core/security/middleware.py`):
+  1. `Authorization: Bearer …` header.
+  2. `orbiteus_token` cookie.
+- **Edge gate.** `admin-ui/src/proxy.ts` (Next 16 successor of
+  `middleware.ts`) redirects every protected route
+  to `/login?next=<path>` when the cookie is missing — eliminates the
+  Flash Of Authenticated Content the previous client-only gate produced.
+- **Portal**: cookie + JWT hybrid (share-link exchanged for a portal-scoped
+  cookie); CSRF token required on state-changing requests.
 - **Revocation list** (`jti` blacklist) lives in Redis, scoped by tenant_id;
-  middleware checks every request.
+  middleware checks every request, including refresh rotation and logout.
 
 ## Password storage
 

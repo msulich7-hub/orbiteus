@@ -1,15 +1,30 @@
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
 
+/**
+ * Shared axios instance.
+ *
+ * - `withCredentials: true` so the browser sends the `orbiteus_token` cookie
+ *   on same-origin /api/* calls (Next rewrites land both apps on the same
+ *   origin via `next.config.js`).
+ * - No request interceptor injects an Authorization header any more — the
+ *   backend reads JWT from the httpOnly cookie set by /api/auth/login.
+ *   See docs/adr/0017-httponly-cookie-session.md.
+ */
 export const api = axios.create({
   baseURL: "/api",
+  withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Legacy localStorage cleanup: remove any token left over from the previous
+// (pre-cookie) auth model so a returning user doesn't carry stale state.
+if (typeof window !== "undefined") {
+  try {
+    window.localStorage.removeItem("token");
+  } catch {
+    /* ignore */
+  }
+}
 
 function toastDetail(err: { response?: { data?: { detail?: unknown } } }): string {
   const d = err.response?.data?.detail;
@@ -25,7 +40,8 @@ api.interceptors.response.use(
     const skip = Boolean(err.config?.skipGlobalErrorToast);
 
     if (status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("token");
+      // Cookie-based auth — let the Next middleware do the redirect on the
+      // next navigation; force an immediate hard reload so SSR re-runs.
       window.location.href = "/login";
       return Promise.reject(err);
     }

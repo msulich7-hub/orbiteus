@@ -4,6 +4,27 @@ All notable changes to Orbiteus are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Auth transport for the Admin UI** — JWTs no longer travel through
+  `localStorage`. Backend now writes `orbiteus_token` (Path=/, 15 min) and
+  `orbiteus_refresh` (Path=/api/auth, 7 days) as `HttpOnly`, `SameSite=Lax`
+  cookies; `Secure` is enabled automatically in production. The new Edge
+  proxy at `admin-ui/src/proxy.ts` (Next 16 successor of `middleware.ts`)
+  redirects unauthenticated
+  requests to `/login?next=<path>` *before* SSR runs, eliminating the
+  Flash Of Authenticated Content. `Authorization: Bearer …` keeps working
+  for non-browser clients (the `/api/auth/login` body still ships both
+  tokens). See [ADR-0017](docs/adr/0017-httponly-cookie-session.md).
+
+### Added
+
+- `POST /api/auth/logout` — clears both auth cookies and revokes the
+  current access `jti` in Redis. The Admin UI `Logout` menu item now
+  posts to it before redirecting to `/login`.
+
 ## [1.0.0] — 2026-05-03 (engine v1.0)
 
 First **Engine v1.0** — boring tech stack, AI-native, ready for adopters.

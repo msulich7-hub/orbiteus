@@ -202,9 +202,14 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", { email, password });
-      localStorage.setItem("token", data.access_token);
-      router.push("/");
+      // Backend sets `orbiteus_token` httpOnly cookie in the Set-Cookie header
+      // (see docs/adr/0017). The body still includes `access_token` for
+      // non-browser clients but we no longer write it to localStorage.
+      await api.post("/auth/login", { email, password });
+      // Hard navigation forces SSR + middleware to read the fresh cookie.
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/";
+      window.location.assign(next);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(msg || "Login failed");

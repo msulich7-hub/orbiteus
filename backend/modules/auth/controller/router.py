@@ -7,13 +7,18 @@ from threading import Lock
 from time import monotonic
 
 import pyotp
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbiteus_core.context import RequestContext
 from orbiteus_core.config import settings
 from orbiteus_core.db import get_session
+from orbiteus_core.security.cookies import (
+    clear_auth_cookies,
+    set_access_cookie,
+    set_refresh_cookie,
+)
 from orbiteus_core.security.middleware import require_auth
 from orbiteus_core.security.passwords import hash_password, verify_password
 from orbiteus_core.security.tokens import (
@@ -126,6 +131,7 @@ class RecoveryCodesResponse(BaseModel):
 async def login(
     payload: LoginRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """Authenticate user and return JWT tokens."""
@@ -188,17 +194,18 @@ async def login(
             except Exception:
                 pass
         first_company = company_ids[0]
-        tokens = _issue_tokens(user, first_company)
+        tokens = _issue_tokens(user, first_company, response)
         tokens.companies = companies
         return tokens
 
     company_id = company_ids[0] if company_ids else None
-    return _issue_tokens(user, company_id)
+    return _issue_tokens(user, company_id, response)
 
 
 @router.post("/select-company", response_model=TokenResponse)
 async def select_company(
     payload: CompanySelectRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session),
     ctx: RequestContext = Depends(require_auth),
 ) -> TokenResponse:
@@ -212,19 +219,29 @@ async def select_company(
     if str(payload.company_id) not in [str(c) for c in (user.company_ids or [])]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company not accessible")
 
-    return _issue_tokens(user, payload.company_id)
+    return _issue_tokens(user, payload.company_id, response)
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
-    payload: RefreshRequest,
     request: Request,
+    response: Response,
+    payload: RefreshRequest | None = Body(default=None),
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
-    """Issue new access token from refresh token."""
+    """Issue new access token from refresh token (body OR `orbiteus_refresh` cookie)."""
     _enforce_rate_limit(request, "refresh", limit=600, window_seconds=60)
+
+    refresh_token = ""
+    if payload is not None and payload.refresh_token:
+        refresh_token = payload.refresh_token
+    if not refresh_token:
+        refresh_token = request.cookies.get("orbiteus_refresh", "")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+
     try:
-        data = decode_refresh_token(payload.refresh_token)
+        data = decode_refresh_token(refresh_token)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -237,13 +254,58 @@ async def refresh(
     user = await repo.get(uuid.UUID(data["sub"]))
 
     company_id = uuid.UUID(data["company_id"]) if data.get("company_id") else None
-    return _issue_tokens(user, company_id)
+
+    # Rotation: revoke the consumed refresh `jti` so it cannot be replayed.
+    old_jti = data.get("jti")
+    if old_jti:
+        try:
+            from orbiteus_core.security.jti import revoke as _revoke_jti
+
+            await _revoke_jti(old_jti, data.get("exp", 0))
+        except Exception:
+            # Redis outage must not block the refresh; logged elsewhere.
+            pass
+
+    return _issue_tokens(user, company_id, response)
+
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Revoke the current `jti`, clear auth cookies, return ok."""
+    clear_auth_cookies(response)
+
+    # Best-effort: revoke the access token's jti via Redis. We re-decode the
+    # bearer to read jti+exp; cookie path goes the same way.
+    auth_header = request.headers.get("authorization") or ""
+    raw = ""
+    if auth_header.lower().startswith("bearer "):
+        raw = auth_header.split(" ", 1)[1].strip()
+    if not raw:
+        raw = request.cookies.get("orbiteus_token", "")
+
+    if raw:
+        try:
+            from orbiteus_core.security.jti import revoke as _revoke_jti
+            from orbiteus_core.security.tokens import decode_access_token
+
+            payload = decode_access_token(raw)
+            if payload.get("jti"):
+                await _revoke_jti(payload["jti"], payload.get("exp", 0))
+        except Exception:
+            pass
+
+    return {"status": "ok"}
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     payload: RegisterRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     """Self-service registration – creates tenant + first user (owner)."""
@@ -301,7 +363,7 @@ async def register(
             detail="Email already registered",
         )
 
-    return _issue_tokens(user, company.id)
+    return _issue_tokens(user, company.id, response)
 
 
 @router.get("/me")
@@ -389,7 +451,13 @@ async def regenerate_recovery_codes(
 # Helper
 # ---------------------------------------------------------------------------
 
-def _issue_tokens(user, company_id) -> TokenResponse:
+def _issue_tokens(user, company_id, response: Response | None = None) -> TokenResponse:
+    """Mint access + refresh tokens.
+
+    When called from an HTTP handler (Response provided), the same tokens are
+    also written as httpOnly cookies (`orbiteus_token`, `orbiteus_refresh`).
+    The body keeps the JWTs for backward-compatible API clients.
+    """
     token_data = {
         "sub": str(user.id),
         "tenant_id": str(user.tenant_id) if user.tenant_id else None,
@@ -397,10 +465,14 @@ def _issue_tokens(user, company_id) -> TokenResponse:
         "roles": user.role_ids or [],
         "is_superadmin": user.is_superadmin,
     }
-    return TokenResponse(
-        access_token=create_access_token(token_data),
-        refresh_token=create_refresh_token(token_data),
-    )
+    access = create_access_token(token_data)
+    refresh = create_refresh_token(token_data)
+
+    if response is not None:
+        set_access_cookie(response, access)
+        set_refresh_cookie(response, refresh)
+
+    return TokenResponse(access_token=access, refresh_token=refresh)
 
 
 def _enforce_rate_limit(request: Request, action: str, limit: int, window_seconds: int) -> None:

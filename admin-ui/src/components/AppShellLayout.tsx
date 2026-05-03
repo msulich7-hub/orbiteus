@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { AppShell, Group, Text, NavLink, ScrollArea, Burger, Menu, ActionIcon, Loader, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   IconDashboard, IconSettings, IconShieldLock, IconFilter, IconAdjustments,
@@ -10,7 +10,7 @@ import {
   IconBuilding, IconTable, IconSearch,
 } from "@tabler/icons-react";
 import { useBranding } from "@/lib/branding";
-import { fetchUiConfig, type ModuleConfig } from "@/lib/api";
+import { api, fetchUiConfig, type ModuleConfig } from "@/lib/api";
 import CommandPalette from "@/components/CommandPalette";
 import PageBreadcrumbs from "@/components/PageBreadcrumbs";
 
@@ -48,17 +48,17 @@ function modelLabel(modelName: string): string {
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const path = usePathname();
-  const router = useRouter();
   const branding = useBranding();
 
   const [modules, setModules] = useState<ModuleConfig[]>([]);
   const [navLoading, setNavLoading] = useState(true);
 
+  // Auth gate is enforced server-side by `admin-ui/src/middleware.ts` reading
+  // the httpOnly `orbiteus_token` cookie before any HTML is generated.
+  // Here we only load module metadata for authenticated routes.
   useEffect(() => {
-    if (path === "/login") return;
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
-      router.replace("/login");
+    if (path === "/login" || path === "/welcome") {
+      setNavLoading(false);
       return;
     }
     fetchUiConfig()
@@ -67,11 +67,16 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
       .finally(() => setNavLoading(false));
   }, [path]);
 
-  if (path === "/login") return <>{children}</>;
+  if (path === "/login" || path === "/welcome") return <>{children}</>;
 
-  function logout() {
-    localStorage.removeItem("token");
-    router.push("/login");
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* even if the server rejects, fall through and force redirect */
+    }
+    // Hard navigation so middleware sees the cleared cookie immediately.
+    window.location.assign("/login");
   }
 
   // Show only non-system modules that have at least one model with views defined

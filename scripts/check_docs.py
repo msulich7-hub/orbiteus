@@ -4,7 +4,7 @@
 Rules enforced:
 1. Every numbered chapter `docs/NN-*.md` for NN in 01..33 exists.
 2. `docs/README.md`, `docs/pre-prompt.md`, `docs/glossary.md` exist.
-3. `docs/adr/README.md`, `docs/adr/_template.md`, and 0001..0016 ADRs exist.
+3. `docs/adr/README.md`, `docs/adr/_template.md`, and 0001..0017 ADRs exist.
 4. Every file referenced by `docs/pre-prompt.md` and `docs/README.md` resolves.
 5. Every ADR linked in `docs/adr/README.md` resolves.
 6. No `[link](path)` to a missing markdown file inside `docs/`.
@@ -30,7 +30,7 @@ REQUIRED_TOP = [
 ]
 
 REQUIRED_NUMBERED = list(range(1, 37))  # 01..36
-REQUIRED_ADR_IDS = list(range(1, 17))   # 0001..0016
+REQUIRED_ADR_IDS = list(range(1, 18))   # 0001..0017
 REQUIRED_ADR_TOP = [
     ADR / "README.md",
     ADR / "_template.md",
