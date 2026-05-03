@@ -1,6 +1,18 @@
 """BaseRepository – generic CRUD + search with automatic record rule application.
 
+PR 3 additions:
+
+- Hooks: `_run_hooks("before_create", ...)` etc., dispatched through
+  `EventBus`. Subclasses can override `before_create / after_create / ...`
+  for module-specific behavior; cross-cutting subscribers (audit,
+  realtime emit, embeddings refresh) attach via `event_bus.subscribe`.
+- Audit log: every CRUD writes a row to `ir_audit_log` unless the model
+  is on the `AUDIT_OPTOUT_MODELS` list (defense against logging the log).
+- Attribution: `created_by_id` and `modified_by_id` auto-populated from
+  `RequestContext.user_id`.
+
 Usage:
+
     class CustomerRepository(BaseRepository[Customer]):
         model_name = "crm.customer"
 
@@ -9,17 +21,28 @@ Usage:
 """
 from __future__ import annotations
 
+import dataclasses
 import uuid
 from typing import Any, Generic, Sequence, TypeVar
 
-from sqlalchemy import Table, delete, func, select, update
+from sqlalchemy import Table, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbiteus_core.base_domain import BaseModel
 from orbiteus_core.context import RequestContext
+from orbiteus_core.events import event_bus
 from orbiteus_core.exceptions import AccessDenied, NotFound
 
 T = TypeVar("T", bound=BaseModel)
+
+
+# Models that must NOT be audited (logging the log creates infinite loops,
+# transient queues are noise). See docs/14-audit.md.
+AUDIT_OPTOUT_MODELS: set[str] = {
+    "base.audit_log",
+    "base.outbox",
+    "base.embedding",
+}
 
 
 class BaseRepository(Generic[T]):
@@ -80,37 +103,115 @@ class BaseRepository(Generic[T]):
 
     async def create(self, data: dict[str, Any]) -> T:
         await self._check_model_access("create")
-        import dataclasses
         fields = {f.name for f in dataclasses.fields(self.domain_class)}
         if "tenant_id" in fields:
             data.setdefault("tenant_id", self.ctx.tenant_id)
         if "company_id" in fields:
             data.setdefault("company_id", self.ctx.company_id)
+        if "created_by_id" in fields and self.ctx.user_id:
+            data.setdefault("created_by_id", self.ctx.user_id)
+        if "modified_by_id" in fields and self.ctx.user_id:
+            data.setdefault("modified_by_id", self.ctx.user_id)
+
+        data = await self._before_create(data)
+
         obj = self.domain_class(**data)
         self.session.add(obj)
         await self.session.flush()
+
+        await self._after_create(obj)
+        await self._audit("create", obj, diff=self._diff_for_create(obj))
         return obj
 
     async def update(self, record_id: uuid.UUID, data: dict[str, Any]) -> T:
         await self._check_model_access("write")
         obj = await self.get(record_id)
+        old_snapshot = self._snapshot(obj)
+
+        data = await self._before_write(obj, data)
+
         for key, value in data.items():
             setattr(obj, key, value)
+        if "modified_by_id" in {f.name for f in dataclasses.fields(self.domain_class)} and self.ctx.user_id:
+            obj.modified_by_id = self.ctx.user_id  # type: ignore[attr-defined]
         await self.session.flush()
+
+        await self._after_write(obj, old_snapshot)
+        diff = self._diff(old_snapshot, self._snapshot(obj))
+        if diff:
+            await self._audit("update", obj, diff=diff)
         return obj
 
     async def delete(self, record_id: uuid.UUID) -> None:
         await self._check_model_access("unlink")
         obj = await self.get(record_id)
+        await self._before_unlink(obj)
+
         # Soft delete: set active=False
         obj.active = False  # type: ignore[attr-defined]
+        if "modified_by_id" in {f.name for f in dataclasses.fields(self.domain_class)} and self.ctx.user_id:
+            obj.modified_by_id = self.ctx.user_id  # type: ignore[attr-defined]
         await self.session.flush()
+
+        await self._after_unlink(obj)
+        await self._audit("delete", obj, diff={"active": [True, False]})
 
     async def hard_delete(self, record_id: uuid.UUID) -> None:
         """Permanent delete – use only from migrations or admin."""
         await self._check_model_access("unlink")
         stmt = delete(self.domain_class).where(self.table.c.id == record_id)
         await self.session.execute(stmt)
+
+    # ------------------------------------------------------------------
+    # Hooks (override in subclasses for module-specific logic)
+    # ------------------------------------------------------------------
+
+    async def _before_create(self, data: dict[str, Any]) -> dict[str, Any]:
+        await event_bus.publish(
+            f"record.before_create:{self.model_name}",
+            {"model": self.model_name, "data": data, "ctx": self.ctx},
+        )
+        return data
+
+    async def _after_create(self, obj: T) -> None:
+        await event_bus.publish(
+            f"record.created:{self.model_name}",
+            self._record_event_payload(obj),
+        )
+        await event_bus.publish(
+            "record.created",
+            self._record_event_payload(obj),
+        )
+
+    async def _before_write(self, obj: T, data: dict[str, Any]) -> dict[str, Any]:
+        await event_bus.publish(
+            f"record.before_write:{self.model_name}",
+            {"model": self.model_name, "id": getattr(obj, "id", None),
+             "data": data, "ctx": self.ctx},
+        )
+        return data
+
+    async def _after_write(self, obj: T, old_snapshot: dict[str, Any]) -> None:
+        payload = self._record_event_payload(obj)
+        payload["old"] = old_snapshot
+        await event_bus.publish(f"record.updated:{self.model_name}", payload)
+        await event_bus.publish("record.updated", payload)
+
+    async def _before_unlink(self, obj: T) -> None:
+        await event_bus.publish(
+            f"record.before_unlink:{self.model_name}",
+            self._record_event_payload(obj),
+        )
+
+    async def _after_unlink(self, obj: T) -> None:
+        await event_bus.publish(
+            f"record.deleted:{self.model_name}",
+            self._record_event_payload(obj),
+        )
+        await event_bus.publish(
+            "record.deleted",
+            self._record_event_payload(obj),
+        )
 
     # ------------------------------------------------------------------
     # Multi-tenancy filter
@@ -172,4 +273,80 @@ class BaseRepository(Generic[T]):
 
     async def _check_record_rules(self, obj: T, operation: str) -> None:
         """Verify a loaded record is accessible under record rules."""
-        pass  # enforced at query level; this is a post-load safety hook
+        # enforced at query level; this is a post-load safety hook
+        return None
+
+    # ------------------------------------------------------------------
+    # Snapshots, diffs, audit
+    # ------------------------------------------------------------------
+
+    _AUDIT_REDACT_FIELDS: set[str] = {"password_hash", "totp_secret"}
+    _AUDIT_SKIP_FIELDS: set[str] = {"create_date", "write_date", "custom_fields"}
+
+    def _snapshot(self, obj: T) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for f in dataclasses.fields(self.domain_class):
+            if f.name in self._AUDIT_SKIP_FIELDS:
+                continue
+            value = getattr(obj, f.name, None)
+            if f.name in self._AUDIT_REDACT_FIELDS and value is not None:
+                value = "***"
+            out[f.name] = value
+        return out
+
+    def _diff_for_create(self, obj: T) -> dict[str, Any]:
+        snap = self._snapshot(obj)
+        return {k: [None, v] for k, v in snap.items() if v not in (None, "", False, [], {})}
+
+    @staticmethod
+    def _diff(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        keys = set(old) | set(new)
+        for key in keys:
+            o, n = old.get(key), new.get(key)
+            if o != n:
+                out[key] = [o, n]
+        return out
+
+    def _record_event_payload(self, obj: T) -> dict[str, Any]:
+        rid = getattr(obj, "id", None)
+        return {
+            "model": self.model_name,
+            "id": rid,
+            "tenant_id": getattr(obj, "tenant_id", None),
+            "actor": self.ctx.actor,
+            "user_id": self.ctx.user_id,
+            "request_id": self.ctx.request_id,
+        }
+
+    async def _audit(self, operation: str, obj: T, *, diff: dict[str, Any]) -> None:
+        if self.model_name in AUDIT_OPTOUT_MODELS:
+            return
+
+        # Lazy import to avoid circular at module load.
+        from modules.base.model.domain import IrAuditLog
+        from orbiteus_core.db import metadata  # noqa: F401
+
+        record_id = getattr(obj, "id", None)
+        tenant_id = getattr(obj, "tenant_id", None)
+        actor = self.ctx.actor
+        user_id = self.ctx.user_id
+        meta: dict[str, Any] = {}
+        if self.ctx.scope and self.ctx.scope != "internal":
+            meta["scope"] = self.ctx.scope
+        if self.ctx.is_superadmin:
+            meta["superadmin"] = True
+
+        row = IrAuditLog(
+            tenant_id=tenant_id,
+            actor=actor,
+            user_id=user_id,
+            request_id=self.ctx.request_id,
+            model=self.model_name,
+            record_id=record_id,
+            operation=operation,
+            diff=diff,
+            metadata=meta,
+        )
+        self.session.add(row)
+        await self.session.flush()

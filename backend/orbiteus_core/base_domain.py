@@ -27,6 +27,9 @@ class BaseModel:
     write_date: datetime | None = None
     active: bool = True
     custom_fields: dict[str, Any] = field(default_factory=dict)
+    # Audit attribution — populated automatically by BaseRepository hooks.
+    created_by_id: uuid.UUID | None = None
+    modified_by_id: uuid.UUID | None = None
 
 
 @dataclass

@@ -24,13 +24,14 @@
 
 ## 2. Wave 1 — Foundations
 
-- [ ] 2.1 Repository hooks (before/after create/write/unlink)
-- [ ] 2.2 `created_by_id` / `modified_by_id` columns
-- [ ] 2.3 `ir_audit_log` (mandatory, opt-out) → ADR-0010
-- [ ] 2.4 EventBus (in-process) + Postgres Outbox
+- [x] 2.1 Repository hooks (before/after create/write/unlink) — PR 3
+- [x] 2.2 `created_by_id` / `modified_by_id` columns — PR 3
+- [x] 2.3 `ir_audit_log` (mandatory, opt-out) → ADR-0010 — PR 3
+- [x] 2.4a EventBus (in-process) — PR 3
+- [ ] 2.4b Postgres Outbox — PR 4
 - [ ] 2.5 Many2one resolution in API responses (`{field}__name`)
 - [ ] 2.6 Move `_seed_crm_defaults` out of `api.py` to `modules/crm/bootstrap.py`
-- [ ] 2.7 `migrate` service in compose + Alembic advisory lock
+- [x] 2.7 `migrate` service in compose + Alembic advisory lock — PR 2
 
 ## 3. Wave 2 — Cross-cutting infra
 

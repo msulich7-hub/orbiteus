@@ -30,6 +30,7 @@ from modules.base.model.domain import (
     IrActionServer,
     IrActionWindow,
     IrAttachment,
+    IrAuditLog,
     IrConfigParam,
     IrCron,
     IrMailTemplate,
@@ -294,6 +295,24 @@ ir_attachments_table = Table(
     Column("description", Text),
 )
 
+ir_audit_log_table = Table(
+    "ir_audit_log",
+    metadata,
+    *make_system_columns(),
+    Column("tenant_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("actor", String(20), nullable=False, server_default="system"),
+    Column("user_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("request_id", String(64), nullable=True, index=True),
+    Column("model", String(255), nullable=False, index=True),
+    Column("record_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("operation", String(50), nullable=False, index=True),
+    Column("diff", JSON, nullable=False, server_default="{}"),
+    # `metadata` column intentionally; SQLAlchemy reserves the `Table.metadata`
+    # *attribute*, not column names. We map it on the domain class via the
+    # `properties` dict in register_mapping when needed.
+    Column("metadata", JSON, nullable=False, server_default="{}"),
+)
+
 
 # ---------------------------------------------------------------------------
 # Register imperative mappings
@@ -318,6 +337,7 @@ def setup() -> None:
     register_mapping(IrMailTemplate, ir_mail_templates_table)
     register_mapping(IrAttachment, ir_attachments_table)
     register_mapping(IrUiView, ir_ui_views_table)
+    register_mapping(IrAuditLog, ir_audit_log_table)
 
     _register_auto_crud()
 

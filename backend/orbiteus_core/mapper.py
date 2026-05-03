@@ -30,7 +30,11 @@ mapper_registry = registry()
 
 
 def make_base_columns() -> list[Column]:
-    """Return the standard base columns every business table must have."""
+    """Return the standard base columns every business table must have.
+
+    Includes audit attribution columns (`created_by_id`, `modified_by_id`)
+    populated by `BaseRepository` hooks — see `docs/05-rbac-multitenancy.md`.
+    """
     return [
         Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
         Column("tenant_id", UUID(as_uuid=True), nullable=True, index=True),
@@ -50,6 +54,8 @@ def make_base_columns() -> list[Column]:
         ),
         Column("active", Boolean, nullable=False, server_default="true"),
         Column("custom_fields", JSON, nullable=False, server_default="{}"),
+        Column("created_by_id", UUID(as_uuid=True), nullable=True),
+        Column("modified_by_id", UUID(as_uuid=True), nullable=True),
     ]
 
 

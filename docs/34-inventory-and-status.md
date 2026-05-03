@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 2 — `feat/prod-stack-and-hygiene`).
+> Last reviewed: 2026-05-03 (after PR 3 — `feat/repo-hooks-and-audit`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -18,18 +18,18 @@
 | Concern | Status | Path | Gap vs docs |
 |---|---|---|---|
 | Module Registry + topo sort | DONE | `registry.py` | — |
-| BaseRepository (tenant filter, RBAC, soft delete) | DONE | `repository.py` | hooks `before_/after_*` MISSING |
+| BaseRepository (tenant filter, RBAC, soft delete, hooks, audit, attribution) | DONE | `repository.py` | extended in PR 3 |
 | AutoRouter (5 CRUD endpoints) | DONE | `auto_router.py` | — |
 | ui-config builder | DONE | `ui_config.py` | needs `relation` for many2one |
 | RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | in-memory dict; needs Redis (ADR-0003) |
 | JWT + bcrypt | DONE | `security/{tokens,passwords}.py` | TTL 60min; needs 15min + jti revocation |
 | TOTP 2FA | DONE | `security/tokens.py` | recovery codes MISSING |
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
-| **Audit log (`ir_audit_log`)** | MISSING | — | core wave 1 |
-| **EventBus (in-process)** | MISSING | — | core wave 1 |
-| **Postgres Outbox (`ir_outbox`)** | MISSING | — | core wave 1 |
-| **Repository hooks (before/after)** | MISSING | — | core wave 1 |
-| **created_by / modified_by columns** | MISSING | `base_domain.py` | core wave 1 |
+| **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
+| **EventBus (in-process)** | DONE | `orbiteus_core/events.py` | sync error isolation, decorator subscribe |
+| **Postgres Outbox (`ir_outbox`)** | MISSING | — | PR 4 |
+| **Repository hooks (before/after)** | DONE | `BaseRepository._before_/_after_*` + EventBus | tests in `tests/test_eventbus.py` |
+| **created_by / modified_by columns** | DONE | `make_base_columns`, `BaseModel` | populated in `BaseRepository.create/update/delete` |
 | **FK resolution `{field}__name`** | MISSING | — | needed for CRM-MVP |
 | **Sequences `next_val()`** | STUB | `IrSequence` row only | core wave 2 |
 | **Attachments upload/download** | STUB | `IrAttachment` row only | core wave 3 |

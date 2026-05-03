@@ -1,12 +1,14 @@
 """Base module custom endpoints (beyond auto-CRUD)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbiteus_core.context import RequestContext
 from orbiteus_core.db import get_session
-from orbiteus_core.security.middleware import require_superadmin
+from orbiteus_core.security.middleware import require_auth, require_superadmin
 
 router = APIRouter(tags=["base"])
 
@@ -43,6 +45,79 @@ async def get_branding(session: AsyncSession = Depends(get_session)) -> dict:
 async def health() -> dict:
     """System health check."""
     return {"status": "ok", "service": "orbiteus-backend"}
+
+
+@router.get("/audit-log")
+async def list_audit_log(
+    model: str | None = Query(default=None),
+    record_id: uuid.UUID | None = Query(default=None),
+    actor: str | None = Query(default=None),
+    operation: str | None = Query(default=None),
+    user_id: uuid.UUID | None = Query(default=None),
+    limit: int = Query(default=100, le=1000, ge=1),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Read the audit log (RBAC-gated; tenant-scoped unless superadmin).
+
+    Filters:
+        - model         e.g. ?model=crm.customer
+        - record_id     e.g. ?record_id=<uuid>
+        - actor         user | ai | system
+        - operation     create | update | delete | tool_call | login | login_failed
+        - user_id       filter by acting user
+
+    Returns paginated rows ordered by `create_date DESC`.
+    """
+    from sqlalchemy import desc, select
+
+    from modules.base.model.mapping import ir_audit_log_table as t
+
+    stmt = select(t)
+    if not ctx.is_superadmin and ctx.tenant_id is not None:
+        stmt = stmt.where(t.c.tenant_id == ctx.tenant_id)
+    if model is not None:
+        stmt = stmt.where(t.c.model == model)
+    if record_id is not None:
+        stmt = stmt.where(t.c.record_id == record_id)
+    if actor is not None:
+        stmt = stmt.where(t.c.actor == actor)
+    if operation is not None:
+        stmt = stmt.where(t.c.operation == operation)
+    if user_id is not None:
+        stmt = stmt.where(t.c.user_id == user_id)
+
+    # Total count for pagination.
+    from sqlalchemy import func
+    total = (
+        await session.execute(select(func.count()).select_from(stmt.subquery()))
+    ).scalar_one()
+
+    stmt = stmt.order_by(desc(t.c.create_date)).offset(offset).limit(limit)
+    rows = (await session.execute(stmt)).mappings().all()
+
+    return {
+        "items": [
+            {
+                "id": str(r["id"]),
+                "create_date": r["create_date"].isoformat() if r["create_date"] else None,
+                "tenant_id": str(r["tenant_id"]) if r["tenant_id"] else None,
+                "actor": r["actor"],
+                "user_id": str(r["user_id"]) if r["user_id"] else None,
+                "request_id": r["request_id"],
+                "model": r["model"],
+                "record_id": str(r["record_id"]) if r["record_id"] else None,
+                "operation": r["operation"],
+                "diff": r["diff"],
+                "metadata": r["metadata"],
+            }
+            for r in rows
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/modules", dependencies=[Depends(require_superadmin)])

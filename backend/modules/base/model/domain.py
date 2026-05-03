@@ -254,3 +254,26 @@ class IrAttachment(BaseModel):
     store_fname: str = ""        # path on disk or S3 key
     url: str | None = None
     description: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Audit log (PR 3) — mandatory, opt-out only via AUDIT_OPTOUT_MODELS in
+# orbiteus_core.repository.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class IrAuditLog(SystemModel):
+    """One row per CRUD operation through `BaseRepository`.
+
+    See `docs/14-audit.md` for the full policy.
+    """
+
+    tenant_id: uuid.UUID | None = None
+    actor: str = "system"          # "user" | "ai" | "system"
+    user_id: uuid.UUID | None = None
+    request_id: str | None = None
+    model: str = ""
+    record_id: uuid.UUID | None = None
+    operation: str = ""            # "create" | "update" | "delete" | "tool_call" | "login" | ...
+    diff: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
