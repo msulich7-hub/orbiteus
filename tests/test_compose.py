@@ -76,10 +76,23 @@ def test_prod_pgbouncer_in_transaction_mode():
     assert env["POOL_MODE"] == "transaction"
 
 
-def test_prod_worker_and_beat_are_profile_gated():
+def test_prod_worker_and_beat_run_by_default():
+    """Celery worker + beat are core in prod — no profile gating."""
     doc = _load(PROD)
-    assert doc["services"]["worker"].get("profiles") == ["worker"]
-    assert doc["services"]["beat"].get("profiles") == ["worker"]
+    assert "profiles" not in doc["services"]["worker"]
+    assert "profiles" not in doc["services"]["beat"]
+
+
+def test_prod_worker_runs_celery_worker():
+    doc = _load(PROD)
+    entrypoint = doc["services"]["worker"]["entrypoint"]
+    assert any("celery -A celery_app worker" in part for part in entrypoint)
+
+
+def test_prod_beat_runs_celery_beat():
+    doc = _load(PROD)
+    entrypoint = doc["services"]["beat"]["entrypoint"]
+    assert any("celery -A celery_app beat" in part for part in entrypoint)
 
 
 def test_prod_nginx_is_profile_gated():

@@ -17,8 +17,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "redis>=5.0.0",
     "prometheus-client>=0.20.0",
-    # NOTE: temporalio stays only until PR 5 replaces worker.py with Celery (ADR-0015).
-    "temporalio>=1.7.0",
+    "celery>=5.4.0",
     "lagom>=2.7.0",
     "pyotp>=2.9.0",
     "jinja2>=3.1.0",

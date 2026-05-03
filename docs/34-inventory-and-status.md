@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 4 — `feat/postgres-outbox`).
+> Last reviewed: 2026-05-03 (after PR 5 — `feat/celery-worker`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -47,7 +47,7 @@
 | **PgBouncer integration** | DONE (compose) | `docker-compose.prod.yml`, transaction mode | runtime test in PR 7 |
 | **Gunicorn + UvicornWorker entrypoint** | DONE | `backend/entrypoint.sh`, `Dockerfile.prod` | — |
 | **Migrate one-shot service** | DONE | `entrypoint-migrate.sh`, prod compose `migrate` service | — |
-| **Celery 5 + Beat** | STUB | placeholder services in prod compose | real impl in PR 5 |
+| **Celery 5 + Beat** | DONE | `backend/celery_app.py`, `backend/tasks/{outbox,webhook}_tasks.py`, prod compose `worker` + `beat` services | drainer + HMAC webhook delivery shipping |
 | **Health endpoints** | DONE | `orbiteus_core/health.py` (`/api/health/{live,ready}`) | — |
 | **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` | series expanded in PR 13 |
 | **JSON logging + request_id** | DONE | `orbiteus_core/observability/{logging,middleware}.py` | tenant_id/user_id ctx wired in PR 6 |
@@ -61,7 +61,6 @@
 | **Multi-company switch endpoint** | MISSING | — | post-v1.0 |
 | **PDF reports** | MISSING | — | post-v1.0 |
 | **Currency conversion** | MISSING | move to `modules/finance` |
-| **Temporal (worker.py)** | STUB | empty `WORKFLOWS` | replace with Celery |
 
 ## Modules (`backend/modules/`)
 

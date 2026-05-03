@@ -114,31 +114,37 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Celery worker placeholder — real implementation lands in PR 5 (ADR-0013).
-  # Kept here so docker-compose.prod.yml has all v1.0 services declared.
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    environment: *backend_env
-    entrypoint: ["sh", "-c", "echo '[worker] PR 5 will replace this stub with celery -A celery_app worker -l info'; sleep infinity"]
+    environment:
+      <<: *backend_env
+      USE_GUNICORN: "0"
+    entrypoint: ["sh", "-c", "celery -A celery_app worker -l info -Q default,outbox"]
     depends_on:
-      backend:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      pgbouncer:
         condition: service_started
     restart: unless-stopped
-    profiles: ["worker"]
 
   beat:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    environment: *backend_env
-    entrypoint: ["sh", "-c", "echo '[beat] PR 5 will replace this stub with celery -A celery_app beat -l info'; sleep infinity"]
+    environment:
+      <<: *backend_env
+      USE_GUNICORN: "0"
+    entrypoint: ["sh", "-c", "celery -A celery_app beat -l info"]
     depends_on:
-      backend:
+      worker:
         condition: service_started
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-    profiles: ["worker"]
 
   frontend:
     build:
