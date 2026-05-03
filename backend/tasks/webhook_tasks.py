@@ -42,13 +42,15 @@ async def deliver_webhook_async(
                     ir_webhooks_table.c.secret,
                     ir_webhooks_table.c.is_active,
                     ir_webhooks_table.c.active,
+                    ir_webhooks_table.c.auth_header_name,
+                    ir_webhooks_table.c.auth_header_value,
                 ).where(ir_webhooks_table.c.id == webhook_id)
             )
         ).first()
 
         if row is None:
             raise ValueError(f"webhook {webhook_id} not found")
-        url, secret, is_active, active = row
+        url, secret, is_active, active, auth_h_name, auth_h_value = row
         if not is_active or not active:
             logger.info("webhook.skip_inactive", extra={"webhook_id": webhook_id})
             return
@@ -60,6 +62,12 @@ async def deliver_webhook_async(
             "X-Orbiteus-Event": event,
             "X-Orbiteus-Signature": signature,
         }
+        # Optional inbound-auth header (e.g. `Authorization: Bearer …`).
+        # HMAC signing in `X-Orbiteus-Signature` remains unconditional —
+        # this is *additional* auth for receivers that gate webhooks on
+        # a header on top of HMAC verification.
+        if auth_h_name and auth_h_value:
+            headers[auth_h_name] = auth_h_value
 
         async with httpx.AsyncClient(timeout=15.0) as http:
             resp = await http.post(url, content=body, headers=headers)

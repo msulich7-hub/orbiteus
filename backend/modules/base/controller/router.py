@@ -1,9 +1,11 @@
 """Base module custom endpoints (beyond auto-CRUD)."""
 from __future__ import annotations
 
+import secrets
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbiteus_core.context import RequestContext
@@ -118,6 +120,245 @@ async def list_audit_log(
         "limit": limit,
         "offset": offset,
     }
+
+
+# ---------------------------------------------------------------------------
+# Webhook subscribers (CRUD + test ping). Auto-CRUD is intentionally NOT
+# used here: the conditional UI ("field_filter only meaningful when
+# record.updated is in event_mask") and the secret rotation flow are too
+# specific for the generic builder.
+# ---------------------------------------------------------------------------
+
+ALLOWED_EVENTS = ("record.created", "record.updated", "record.deleted")
+
+
+class WebhookCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    url: str = Field(min_length=1, max_length=2048)
+    secret: str | None = None  # auto-generated when missing
+    event_mask: list[str] = Field(default_factory=list)
+    model_filter: str | None = None
+    field_filter: list[str] = Field(default_factory=list)
+    auth_header_name: str | None = None
+    auth_header_value: str | None = None
+    is_active: bool = True
+
+
+class WebhookUpdate(BaseModel):
+    name: str | None = None
+    url: str | None = None
+    secret: str | None = None
+    event_mask: list[str] | None = None
+    model_filter: str | None = None
+    field_filter: list[str] | None = None
+    auth_header_name: str | None = None
+    auth_header_value: str | None = None
+    is_active: bool | None = None
+
+
+def _serialise_webhook(row) -> dict:
+    return {
+        "id": str(row["id"]),
+        "name": row["name"],
+        "url": row["url"],
+        "event_mask": row["event_mask"] or [],
+        "model_filter": row["model_filter"],
+        "field_filter": row["field_filter"] or [],
+        "auth_header_name": row["auth_header_name"],
+        # Never echo the auth value, secret, or HMAC key back to the
+        # client. Operators can rotate them via PUT.
+        "has_auth_header_value": bool(row["auth_header_value"]),
+        "has_secret": bool(row["secret"]),
+        "is_active": row["is_active"],
+        "last_delivery_at": row["last_delivery_at"],
+        "last_delivery_status": row["last_delivery_status"],
+        "create_date": row["create_date"].isoformat() if row["create_date"] else None,
+    }
+
+
+def _validate_event_mask(mask: list[str]) -> None:
+    bad = [e for e in mask if e not in ALLOWED_EVENTS]
+    if bad:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "webhook.invalid_event", "events": bad,
+                    "allowed": list(ALLOWED_EVENTS)},
+        )
+
+
+@router.get("/webhooks")
+async def list_webhooks(
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Return webhook subscribers for the caller's tenant."""
+    from sqlalchemy import select, desc
+
+    from modules.base.model.mapping import ir_webhooks_table as t
+
+    if ctx.tenant_id is None:
+        return {"items": []}
+    stmt = select(t).where(t.c.tenant_id == ctx.tenant_id, t.c.active == True)  # noqa: E712
+    stmt = stmt.order_by(desc(t.c.create_date))
+    rows = (await session.execute(stmt)).mappings().all()
+    return {"items": [_serialise_webhook(r) for r in rows]}
+
+
+@router.post("/webhooks", status_code=201)
+async def create_webhook(
+    payload: WebhookCreate,
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Register a new webhook subscriber."""
+    from sqlalchemy import insert, select
+
+    from modules.base.model.mapping import ir_webhooks_table as t
+
+    if ctx.tenant_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+    _validate_event_mask(payload.event_mask)
+
+    secret = (payload.secret or secrets.token_urlsafe(32)).strip()
+    new_id = uuid.uuid4()
+    await session.execute(
+        insert(t).values(
+            id=new_id,
+            tenant_id=ctx.tenant_id,
+            name=payload.name,
+            url=payload.url,
+            secret=secret,
+            event_mask=payload.event_mask,
+            model_filter=payload.model_filter or None,
+            field_filter=payload.field_filter or [],
+            auth_header_name=payload.auth_header_name or None,
+            auth_header_value=payload.auth_header_value or None,
+            is_active=payload.is_active,
+            created_by_id=ctx.user_id,
+            modified_by_id=ctx.user_id,
+        )
+    )
+    await session.commit()
+
+    row = (await session.execute(select(t).where(t.c.id == new_id))).mappings().first()
+    out = _serialise_webhook(row) if row else {"id": str(new_id)}
+    # Return the freshly-generated secret ONCE on create so the operator
+    # can copy it. Subsequent reads only flag that a secret exists.
+    out["secret"] = secret
+    return out
+
+
+@router.put("/webhooks/{webhook_id}")
+async def update_webhook(
+    webhook_id: uuid.UUID,
+    payload: WebhookUpdate,
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Update a webhook subscriber. Empty fields keep their previous value."""
+    from sqlalchemy import select, update
+
+    from modules.base.model.mapping import ir_webhooks_table as t
+
+    if ctx.tenant_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+
+    where = (t.c.id == webhook_id) & (t.c.tenant_id == ctx.tenant_id)
+    existing = (await session.execute(select(t).where(where))).mappings().first()
+    if existing is None:
+        raise HTTPException(status_code=404, detail="webhook not found")
+
+    values: dict = {"modified_by_id": ctx.user_id}
+    if payload.name is not None:           values["name"] = payload.name
+    if payload.url is not None:            values["url"] = payload.url
+    if payload.secret is not None and payload.secret.strip():
+                                            values["secret"] = payload.secret.strip()
+    if payload.event_mask is not None:
+        _validate_event_mask(payload.event_mask)
+        values["event_mask"] = payload.event_mask
+    if payload.model_filter is not None:
+        values["model_filter"] = payload.model_filter or None
+    if payload.field_filter is not None:
+        values["field_filter"] = payload.field_filter
+    if payload.auth_header_name is not None:
+        values["auth_header_name"] = payload.auth_header_name or None
+    if payload.auth_header_value is not None:
+        values["auth_header_value"] = payload.auth_header_value or None
+    if payload.is_active is not None:      values["is_active"] = payload.is_active
+
+    await session.execute(update(t).where(where).values(**values))
+    await session.commit()
+
+    row = (await session.execute(select(t).where(where))).mappings().first()
+    return _serialise_webhook(row) if row else {"id": str(webhook_id)}
+
+
+@router.delete("/webhooks/{webhook_id}", status_code=204)
+async def delete_webhook(
+    webhook_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> None:
+    """Soft-delete (active=false) so audit trail is preserved."""
+    from sqlalchemy import update
+
+    from modules.base.model.mapping import ir_webhooks_table as t
+
+    if ctx.tenant_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+    await session.execute(
+        update(t)
+        .where(t.c.id == webhook_id, t.c.tenant_id == ctx.tenant_id)
+        .values(active=False, modified_by_id=ctx.user_id)
+    )
+    await session.commit()
+
+
+@router.post("/webhooks/{webhook_id}/test")
+async def test_webhook(
+    webhook_id: uuid.UUID,
+    body: dict = Body(default={}),
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Send a synthetic delivery so the operator can verify the receiver."""
+    from sqlalchemy import select
+
+    from modules.base.model.mapping import ir_webhooks_table as t
+
+    if ctx.tenant_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+    where = (t.c.id == webhook_id) & (t.c.tenant_id == ctx.tenant_id)
+    row = (await session.execute(select(t).where(where))).mappings().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="webhook not found")
+
+    # Direct-delivery (skip Outbox) so the operator gets immediate feedback.
+    from tasks.webhook_tasks import deliver_webhook_async
+
+    test_payload = {
+        "event": "test.ping",
+        "tenant_id": str(ctx.tenant_id),
+        "model": row["model_filter"] or "test.ping",
+        "id": "00000000-0000-0000-0000-000000000000",
+        "actor": ctx.actor,
+        "request_id": ctx.request_id,
+        "diff": body.get("diff") or {},
+    }
+    try:
+        await deliver_webhook_async(
+            event="test.ping",
+            payload=test_payload,
+            webhook_id=str(webhook_id),
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "webhook.test_failed", "message": str(exc)},
+        )
+
+    fresh = (await session.execute(select(t).where(where))).mappings().first()
+    return _serialise_webhook(fresh) if fresh else {"id": str(webhook_id)}
 
 
 @router.get("/modules", dependencies=[Depends(require_superadmin)])

@@ -33,7 +33,7 @@
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
 | **EventBus (in-process)** | DONE | `orbiteus_core/events.py` | sync error isolation, decorator subscribe |
 | **Postgres Outbox (`ir_outbox`)** | DONE | `orbiteus_core/outbox.py`, `IrOutbox`, `outbox_dispatcher.py`, migration `b2a4e1c0d003` | dispatcher subscribed to `record.*`; webhook delivery in PR 5 |
-| **Webhooks (`ir_webhooks`)** | DONE (table + dispatcher) | `IrWebhook`, dispatcher fan-out per active subscriber | actual HTTP delivery in PR 5 |
+| **Webhooks (`ir_webhooks`)** | DONE | `IrWebhook` + per-model + per-field filters + optional auth header (migration `f6a1b2c3d007`); dispatcher in `outbox_dispatcher.py`; admin UI at `/technical/webhooks`; `POST /api/base/webhooks/{id}/test` for synthetic delivery | HMAC signing in `X-Orbiteus-Signature` is unconditional |
 | **Repository hooks (before/after)** | DONE | `BaseRepository._before_/_after_*` + EventBus | tests in `tests/test_eventbus.py` |
 | **created_by / modified_by columns** | DONE | `make_base_columns`, `BaseModel` | populated in `BaseRepository.create/update/delete` |
 | **FK resolution `{field}__name`** | MISSING | — | needed for CRM-MVP |

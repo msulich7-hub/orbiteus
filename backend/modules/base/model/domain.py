@@ -309,6 +309,18 @@ class IrWebhook(BaseModel):
     url: str = ""
     secret: str = ""                 # HMAC-SHA256 signing key
     event_mask: list[str] = field(default_factory=list)  # ["record.created", ...]
+    # NULL → fan out for every business model in the tenant.
+    # A dotted name like "crm.person" → only that model fires this webhook.
+    model_filter: str | None = None
+    # Only applies to "record.updated". Empty list → any field change fires.
+    # Otherwise a delivery is enqueued only when at least one of the listed
+    # fields appears in the payload's `diff` keys.
+    field_filter: list[str] = field(default_factory=list)
+    # Optional inbound-auth header on the receiver side, e.g.
+    # `Authorization: Bearer xyz` or `X-Custom-Token: abc`. The HMAC
+    # signature on `X-Orbiteus-Signature` is unconditional.
+    auth_header_name: str | None = None
+    auth_header_value: str | None = None
     is_active: bool = True
     last_delivery_at: datetime | None = None
     last_delivery_status: str = ""

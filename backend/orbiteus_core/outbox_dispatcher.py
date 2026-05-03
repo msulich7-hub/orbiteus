@@ -74,14 +74,30 @@ async def _on_record_event(payload: dict[str, Any]) -> None:
             stmt = select(
                 ir_webhooks_table.c.id,
                 ir_webhooks_table.c.event_mask,
+                ir_webhooks_table.c.model_filter,
+                ir_webhooks_table.c.field_filter,
             ).where(
                 ir_webhooks_table.c.tenant_id == tenant_id,
                 ir_webhooks_table.c.is_active == True,  # noqa: E712
                 ir_webhooks_table.c.active == True,     # noqa: E712
             )
             rows = (await session.execute(stmt)).all()
-            for webhook_id, mask in rows:
+            payload_model = payload.get("model")
+            payload_diff = payload.get("diff") or {}
+            for webhook_id, mask, model_filter, field_filter in rows:
+                # 1) Event mask — empty list means "all events".
                 if mask and event_name not in mask:
+                    continue
+                # 2) Model filter — NULL/empty means "all models".
+                if model_filter and model_filter != payload_model:
+                    continue
+                # 3) Field filter — only meaningful for `record.updated`.
+                #    Empty list means "any field change fires".
+                if (
+                    event_name == "record.updated"
+                    and field_filter
+                    and not (set(field_filter) & set(payload_diff.keys()))
+                ):
                     continue
                 await enqueue(
                     session,

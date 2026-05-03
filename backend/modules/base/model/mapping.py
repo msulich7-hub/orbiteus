@@ -346,6 +346,15 @@ ir_webhooks_table = Table(
     Column("secret", String(255), nullable=False),
     # JSON list of event names this subscriber listens to (e.g. "record.created").
     Column("event_mask", JSON, nullable=False, server_default="[]"),
+    # NULL → match every model in the tenant. Dotted name → exact match.
+    Column("model_filter", String(128), nullable=True),
+    # JSON list of fields that trigger `record.updated`. Empty list → any.
+    Column("field_filter", JSON, nullable=False, server_default="[]"),
+    # Optional inbound-auth header for receivers that gate webhooks
+    # behind a header (Authorization, X-Token, etc.). HMAC signing is
+    # unconditional, regardless of these.
+    Column("auth_header_name", String(64), nullable=True),
+    Column("auth_header_value", String(512), nullable=True),
     Column("is_active", Boolean, nullable=False, server_default="true"),
     Column("last_delivery_at", String(50), nullable=True),
     Column("last_delivery_status", String(50), nullable=True),

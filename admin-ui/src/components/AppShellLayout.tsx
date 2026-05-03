@@ -8,6 +8,7 @@ import {
   IconDashboard, IconSettings, IconShieldLock, IconFilter, IconAdjustments,
   IconClockPlay, IconList, IconLogout, IconUser, IconBriefcase, IconUsers,
   IconBuilding, IconTable, IconSearch, IconSparkles, IconHistory,
+  IconWebhook,
 } from "@tabler/icons-react";
 import { useBranding } from "@/lib/branding";
 import { api, type ModuleConfig } from "@/lib/api";
@@ -33,6 +34,7 @@ const TECHNICAL_NAV = [
   { label: "Sequences",       href: "/base/ir-sequence",         icon: IconList },
   { label: "Cron Jobs",       href: "/base/ir-cron",             icon: IconClockPlay },
   { label: "Log Activity",    href: "/technical/audit-log",      icon: IconHistory },
+  { label: "Webhooks",        href: "/technical/webhooks",       icon: IconWebhook },
   { label: "AI Integration",  href: "/technical/ai-integration", icon: IconSparkles },
 ];
 
