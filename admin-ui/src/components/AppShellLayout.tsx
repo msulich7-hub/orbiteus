@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   IconDashboard, IconSettings, IconShieldLock, IconFilter, IconAdjustments,
   IconClockPlay, IconList, IconLogout, IconUser, IconBriefcase, IconUsers,
-  IconBuilding, IconTable, IconSearch, IconSparkles,
+  IconBuilding, IconTable, IconSearch, IconSparkles, IconHistory,
 } from "@tabler/icons-react";
 import { useBranding } from "@/lib/branding";
 import { api, type ModuleConfig } from "@/lib/api";
@@ -26,12 +26,13 @@ const DEFAULT_ICON: React.ComponentType<{ size?: number | string; stroke?: numbe
 const HIDDEN_MODULES = new Set(["auth", "base"]);
 
 const TECHNICAL_NAV = [
-  { label: "Models",          href: "/base/ir-model",         icon: IconSettings },
-  { label: "Access",          href: "/base/ir-model-access",  icon: IconShieldLock },
-  { label: "Rules",           href: "/base/ir-rule",          icon: IconFilter },
-  { label: "Parameters",      href: "/base/ir-config-param",  icon: IconAdjustments },
-  { label: "Sequences",       href: "/base/ir-sequence",      icon: IconList },
-  { label: "Cron Jobs",       href: "/base/ir-cron",          icon: IconClockPlay },
+  { label: "Models",          href: "/base/ir-model",            icon: IconSettings },
+  { label: "Access",          href: "/base/ir-model-access",     icon: IconShieldLock },
+  { label: "Rules",           href: "/base/ir-rule",             icon: IconFilter },
+  { label: "Parameters",      href: "/base/ir-config-param",     icon: IconAdjustments },
+  { label: "Sequences",       href: "/base/ir-sequence",         icon: IconList },
+  { label: "Cron Jobs",       href: "/base/ir-cron",             icon: IconClockPlay },
+  { label: "Log Activity",    href: "/technical/audit-log",      icon: IconHistory },
   { label: "AI Integration",  href: "/technical/ai-integration", icon: IconSparkles },
 ];
 
