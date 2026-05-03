@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     allow_public_registration: bool = True
     bootstrap_admin_email: str = "admin@example.com"
     bootstrap_admin_password: str = "admin1234"
+    # Default tenant created on first startup; the bootstrap admin is bound
+    # to this tenant so AI BYOK, audit attribution and multi-tenancy work
+    # out of the box. Override in production to brand the default org.
+    bootstrap_admin_tenant_name: str = "Orbiteus"
+    bootstrap_admin_tenant_slug: str = "orbiteus"
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> "Settings":

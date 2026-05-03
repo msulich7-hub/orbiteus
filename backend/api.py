@@ -32,6 +32,8 @@ _BRANDING_DEFAULTS = [
 
 _DEFAULT_SUPERADMIN_EMAIL = settings.bootstrap_admin_email
 _DEFAULT_SUPERADMIN_PASSWORD = settings.bootstrap_admin_password
+_DEFAULT_TENANT_NAME = settings.bootstrap_admin_tenant_name
+_DEFAULT_TENANT_SLUG = settings.bootstrap_admin_tenant_slug
 # Product seeds (e.g. CRM default stages) live in the module's `bootstrap.py`,
 # not in the engine lifespan. See `modules/crm/bootstrap.py` (PR 9 / ADR-0008).
 
@@ -45,8 +47,46 @@ async def _create_tables() -> None:
     logger.info("Database tables created (if not exist).")
 
 
-async def _seed_superadmin() -> None:
-    """Create a default superadmin user on first startup if no users exist."""
+async def _seed_default_tenant() -> "uuid.UUID":  # type: ignore[name-defined]
+    """Ensure at least one Tenant row exists; return its id.
+
+    Multi-tenancy is on by default (`docs/05-rbac-multitenancy.md`); without
+    a tenant the bootstrap admin gets `tenant_id = NULL`, which then breaks
+    every endpoint that requires tenant context (AI BYOK, share-link issue,
+    portal-scope tokens, audit attribution).
+    """
+    from orbiteus_core.context import RequestContext
+    from orbiteus_core.db import AsyncSessionFactory
+    from modules.base.controller.repositories import TenantRepository
+
+    ctx = RequestContext(is_superadmin=True)
+    async with AsyncSessionFactory() as session:
+        repo = TenantRepository(session, ctx)
+        existing, total = await repo.search(limit=1)
+        if total > 0 and existing:
+            return existing[0].id
+
+        tenant = await repo.create({
+            "name": _DEFAULT_TENANT_NAME,
+            "slug": _DEFAULT_TENANT_SLUG,
+            "plan": "free",
+            "is_active": True,
+        })
+        await session.commit()
+        logger.info(
+            "Bootstrap default tenant created: name=%s slug=%s id=%s",
+            tenant.name, tenant.slug, tenant.id,
+        )
+        return tenant.id
+
+
+async def _seed_superadmin(default_tenant_id: "uuid.UUID") -> None:  # type: ignore[name-defined]
+    """Create a default superadmin user on first startup if no users exist.
+
+    Also backfills `tenant_id` on a pre-existing admin row so installations
+    that bootstrapped before the default-tenant change don't stay stuck
+    without a tenant binding.
+    """
     from orbiteus_core.context import RequestContext
     from orbiteus_core.db import AsyncSessionFactory
     from orbiteus_core.security.passwords import hash_password
@@ -62,6 +102,7 @@ async def _seed_superadmin() -> None:
                     "Refusing to create bootstrap superadmin with default password in production."
                 )
             await repo.create({
+                "tenant_id": default_tenant_id,
                 "email": _DEFAULT_SUPERADMIN_EMAIL,
                 "name": "Administrator",
                 "password_hash": hash_password(_DEFAULT_SUPERADMIN_PASSWORD),
@@ -72,9 +113,29 @@ async def _seed_superadmin() -> None:
             })
             await session.commit()
             logger.warning(
-                "Default superadmin created: email=%s password=%s — CHANGE THIS IN PRODUCTION!",
+                "Default superadmin created: email=%s password=%s tenant=%s "
+                "— CHANGE THIS IN PRODUCTION!",
                 _DEFAULT_SUPERADMIN_EMAIL,
                 _DEFAULT_SUPERADMIN_PASSWORD,
+                default_tenant_id,
+            )
+            return
+
+        # Backfill: a superadmin from the pre-default-tenant era has
+        # `tenant_id IS NULL`; bind it to the default tenant so AI BYOK
+        # and other tenant-scoped endpoints start working without a
+        # manual SQL fix.
+        admin = next(
+            (u for u in existing if getattr(u, "is_superadmin", False) and u.tenant_id is None),
+            None,
+        )
+        if admin is not None:
+            await repo.update(admin.id, {"tenant_id": default_tenant_id})
+            await session.commit()
+            logger.warning(
+                "Bound legacy superadmin %s to default tenant %s "
+                "(retroactive multi-tenancy fix).",
+                admin.email, default_tenant_id,
             )
 
 
@@ -183,7 +244,8 @@ async def _bootstrap_modules() -> None:
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifecycle."""
     await _create_tables()
-    await _seed_superadmin()
+    default_tenant_id = await _seed_default_tenant()
+    await _seed_superadmin(default_tenant_id)
     await _seed_branding()
     await registry.seed_security_to_db()
     await registry.seed_views_to_db()

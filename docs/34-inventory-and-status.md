@@ -25,6 +25,8 @@
 | RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | Redis cache abstraction available (PR 6); RBAC migration to Redis remaining |
 | JWT + bcrypt | DONE | `security/{tokens,passwords,jti,rate_limit}.py` | 15min/7d, jti revocation list, refresh rotation in `/api/auth/refresh` |
 | **httpOnly cookie session (Admin UI)** | DONE | `security/cookies.py`, `security/middleware.py` (cookie fallback), `modules/auth/controller/router.py`, `admin-ui/src/proxy.ts` | ADR-0017; eliminates FOAC at the Edge |
+| **Default tenant + bootstrap admin binding** | DONE | `backend/api.py` (`_seed_default_tenant`, `_seed_superadmin` backfill) | `BOOTSTRAP_ADMIN_TENANT_NAME/SLUG`; backfills legacy `tenant_id IS NULL` admins |
+| **AI Integration admin page (BYOK)** | DONE | `admin-ui/src/app/technical/ai-integration/page.tsx` (list/save/delete + test query) | wired to `GET/POST/DELETE /api/ai/credentials` and `POST /api/ai/chat` |
 | TOTP 2FA + recovery codes | DONE | `security/tokens.py`, `security/recovery_codes.py`, `POST /api/auth/2fa/recovery-codes` | bcrypt-hashed, single-use codes |
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
