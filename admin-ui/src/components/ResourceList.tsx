@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { fetchList, deleteRecord } from "@/lib/api";
+import { useRealtimeList } from "@/lib/realtime";
 
 interface Column {
   key: string;
@@ -103,7 +104,8 @@ export default function ResourceList({
     };
   }, []);
 
-  // Fetch data when resource, page, search, or sort changes
+  // Fetch data when resource, page, search, sort, or refresh signal changes
+  const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
     setLoading(true);
     const params: Record<string, unknown> = {
@@ -119,7 +121,13 @@ export default function ResourceList({
       .then((d) => { setItems(d.items ?? []); setTotal(d.total ?? 0); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [resource, page, searchQuery, orderBy, orderDir, pageSize]);
+  }, [resource, page, searchQuery, orderBy, orderDir, pageSize, refreshTick]);
+
+  // Realtime: when any other tab / browser mutates this list under the
+  // same tenant, the SSE backplane emits `record.created/updated/deleted`
+  // and we re-fetch the current page. Throttled via a single tick — we
+  // never need more than one refetch per burst of events.
+  useRealtimeList(resource, () => setRefreshTick((t) => t + 1));
 
   // Client-side filtering: filter items where any column value contains search text
   const filteredItems = useMemo(() => {

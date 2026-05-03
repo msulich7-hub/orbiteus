@@ -7,6 +7,7 @@ import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
 import AppShellLayout from "@/components/AppShellLayout";
 import { BrandingProvider } from "@/lib/branding";
+import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_APP_NAME ?? "Orbiteus",
@@ -72,7 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <DatesProvider settings={{ locale: "en", firstDayOfWeek: 1 }}>
             <Notifications />
             <BrandingProvider>
-              <AppShellLayout>{children}</AppShellLayout>
+              <AuthProvider>
+                <AppShellLayout>{children}</AppShellLayout>
+              </AuthProvider>
             </BrandingProvider>
           </DatesProvider>
         </MantineProvider>

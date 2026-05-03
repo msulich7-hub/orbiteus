@@ -50,6 +50,7 @@
 | **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
 | **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` | per-IP active; tenant/user buckets ready to wire post-auth |
 | **Realtime (SSE) + Pub/Sub backplane** | DONE | `orbiteus_core/realtime.py` (publisher + topic helpers + SSE stream) and `realtime_router.py` (`/api/realtime/subscribe`); BaseRepository events bridged via Redis Pub/Sub | nginx config already has `proxy_buffering off` (PR 2) |
+| **Realtime — frontend client** | DONE | `admin-ui/src/lib/realtime.ts` (`useRealtimeList`), `admin-ui/src/lib/auth.tsx` (`AuthProvider`/`useAuth`), wired into `ResourceList` so cross-browser edits refresh the list automatically | EventSource over the httpOnly session cookie; reconnects with exponential back-off |
 | **PgBouncer integration** | DONE (compose) | `docker-compose.prod.yml`, transaction mode | runtime test in PR 7 |
 | **Gunicorn + UvicornWorker entrypoint** | DONE | `backend/entrypoint.sh`, `Dockerfile.prod` | — |
 | **Migrate one-shot service** | DONE | `entrypoint-migrate.sh`, prod compose `migrate` service | — |
