@@ -1,0 +1,76 @@
+# 06 — Authentication
+
+## Tokens
+
+- **Access token** — JWT signed HS256, TTL **15 minutes**, claims:
+  - `sub` (user_id), `tenant_id`, `scope` (`internal` | `portal` | `ai`),
+    `roles`, `jti`, `iat`, `exp`.
+- **Refresh token** — JWT signed HS256, TTL **7 days**, rotates on use.
+  - On refresh, the old `jti` is added to a Redis revocation list with
+    `EXPIRE = remaining_exp` so it cannot be replayed.
+- **Share-link token** — JWT signed HS256, custom TTL (default 7 days),
+  `scope = portal`, `aud` claim set to the resource URI.
+
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/auth/login` | Email + password → access + refresh |
+| POST | `/api/auth/refresh` | Refresh token → new pair (rotation) |
+| POST | `/api/auth/logout` | Revokes current `jti` (Redis blacklist) |
+| POST | `/api/auth/2fa/enroll` | TOTP secret + QR code |
+| POST | `/api/auth/2fa/verify` | One-time code; promotes session |
+| POST | `/api/auth/password/reset` | Email-driven reset link |
+| POST | `/api/auth/share` | Mints a portal share-link token |
+
+## 2FA
+
+- TOTP via `pyotp`, secrets stored in `users.totp_secret` (encrypted at rest).
+- `2fa_required` flag per user; when true, login returns a partial session
+  that only allows `/api/auth/2fa/verify`.
+- Backup codes (planned, tracked in tree-spec).
+
+## Session model
+
+- **Stateless JWT.** No session cookies for `internal` or `ai` scope.
+- **Portal**: cookie + JWT hybrid acceptable for browser-only flows; CSRF
+  token required on state-changing requests when cookie auth is used.
+- **Revocation list** (`jti` blacklist) lives in Redis, scoped by tenant_id;
+  middleware checks every request.
+
+## Password storage
+
+- bcrypt direct (passlib 4.x is incompatible).
+- `bcrypt.gensalt(rounds=12)` minimum; configurable per environment.
+- Failed login attempts: rate-limited per email + IP via Redis token bucket
+  (see `30-rate-limiting.md`).
+
+## Share-link flow (portal scope)
+
+```
+1. Internal user opens a record (e.g. crm.lead/123)
+2. Clicks "Share with client" → modal: TTL, allowed actions (read/comment)
+3. POST /api/auth/share { resource: "crm.lead/123", ttl: 7d, perms: ["read","comment"] }
+4. Server returns a signed URL: https://portal.example.com/s/<base64-token>
+5. External user opens link → portal-ui exchanges token for cookie session
+   bound to scope=portal and the specific resource
+```
+
+The share-link grants no other access. RBAC layer 5 (scope) restricts the
+token to the resource URI in `aud`.
+
+## Admin UI vs Portal UI auth boundary
+
+- Admin UI lives on a single origin per deployment (e.g. `app.example.com`).
+- Portal UI lives on a separate origin (e.g. `portal.example.com` or
+  `*.portal.example.com` per tenant).
+- CORS allows only declared origins; `cors_origins` is a JSON list per env.
+- Cookies are never shared between `app.*` and `portal.*` (different domains).
+
+## What's mandatory
+
+- All endpoints require auth except: `/api/auth/login`, `/api/auth/refresh`,
+  `/api/auth/password/reset`, `/api/base/health`, `/api/base/branding`,
+  `/api/base/ui-config` (anonymous read of public metadata).
+- Password reset emails go through the mail engine; tokens are single-use.
+- 2FA is optional per user but enforced per role via `users.is_2fa_required`.

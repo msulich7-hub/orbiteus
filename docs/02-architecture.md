@@ -1,0 +1,106 @@
+# 02 — Architecture
+
+## Three deployment artifacts, one codebase
+
+```
++---------------------------+     +---------------------------+
+|   admin-ui (Next.js 14)   |     |   portal-ui (Next.js 14)  |
+|   internal users (RBAC)   |     |   external users / share  |
++-------------+-------------+     +-------------+-------------+
+              |  /api/* (Next rewrites, same-origin)          |
+              v                                  v
++------------------------------------------------------------------+
+|  FastAPI behind Gunicorn + UvicornWorker (modular monolith)      |
+|                                                                  |
+|  orbiteus_core: registry, BaseRepository, AutoRouter, ui-config, |
+|                 JWT/RBAC, Audit, EventBus, Outbox, Cache,        |
+|                 Realtime (SSE), AI Layer, Sequences, Attachments |
+|                                                                  |
+|  modules:       base, auth, crm (canonical), hr/project/social  |
++----------+----------------------+--------------------+-----------+
+           |                      |                    |
++----------v---------+  +---------v--------+  +--------v---------+
+|  PostgreSQL 16     |  |  Redis 7         |  |  Celery workers  |
+|  + pgvector        |  |  cache, pub/sub  |  |  + Celery Beat   |
+|  via PgBouncer     |  |  rate limit, jti |  |  (broker: Redis) |
++--------------------+  +------------------+  +------------------+
+```
+
+## Modular monolith — rules
+
+- **One process tree** in production (multiple replicas of the same image).
+- Modules are **physical directories** (`backend/modules/<name>/`) with explicit
+  `manifest.py` declaring `depends_on`.
+- Modules **do not import each other**. They communicate through:
+  - UUID FKs (data references)
+  - Public services exposed by `orbiteus_core` (cross-cutting)
+  - Events on the EventBus / Outbox (asynchronous)
+- `ModuleRegistry` topologically sorts modules at startup before bootstrap.
+
+## Lifecycle
+
+```
+registry.register("crm")
+  |
+  v  bootstrap
+  +-- _discover()          # import module, validate manifest
+  +-- _topological_sort()  # graphlib.TopologicalSorter (stdlib)
+  +-- _load_mappings()     # SQLAlchemy Table + register_mapping()
+  +-- _register_security() # seed access.yaml into RBAC cache (Redis)
+  +-- _register_actions()  # AI Action Registry
+  +-- _register_ai()       # AIModuleConfig registry
+  +-- _register_routes()   # mount auto-CRUD + custom router
+  +-- _register_menus()    # ir_ui_menu entries
+  +-- on_install()         # one-time per tenant (seed)
+```
+
+## Backend technology choices
+
+| Concern | Choice | Rationale |
+|---|---|---|
+| HTTP server | Gunicorn + UvicornWorker | Mature, well-documented, prod default for FastAPI |
+| ORM | SQLAlchemy 2 imperative mapping | Domain dataclasses stay free of ORM coupling |
+| Migrations | Alembic + `pg_try_advisory_lock` | Safe across replicas |
+| DB pooler | PgBouncer (transaction mode) | Required at >100 concurrent connections |
+| Cache / Pub/Sub / Broker / Rate limit / JWT revocation | Redis 7 | One component, many roles |
+| Queue / scheduled tasks | Celery 5 + Celery Beat | Largest Python community, AI-friendly |
+| Embeddings store | pgvector | Same DB, no extra service |
+
+See ADRs `0011`, `0012`, `0013`, `0014`, `0015` for the full reasoning.
+
+## Frontend technology choices
+
+| Concern | Choice |
+|---|---|
+| Framework | Next.js 14 App Router |
+| Design system | Mantine 8 |
+| Shared widgets | `packages/ui` (npm workspace) |
+| State | Component-local + axios + ui-config cache |
+| Charts | recharts |
+
+`admin-ui` and `portal-ui` are independent Next.js apps that share `packages/ui`.
+
+## Multi-tenancy
+
+- `tenant_id` on every business table.
+- `BaseRepository._tenant_filter()` is automatic; bypass requires superadmin
+  context and is logged.
+- `SystemModel` (ir_* tables) — no `tenant_id`, global per instance.
+
+## RBAC (5 levels)
+
+1. **Model access** (`ir_model_access`) — role × model × {read, write, create, unlink}.
+2. **Record rules** (`ir_rule`) — domain expressions filtering rows.
+3. **Action RBAC** — every Action declares `requires_feature`; resolver filters.
+4. **Field-level** — read/write per field per role *(planned, see tree-spec)*.
+5. **Scope** — JWT claim `scope ∈ {internal, portal, ai}` is the upper bound.
+
+See `05-rbac-multitenancy.md`.
+
+## What the architecture deliberately rejects
+
+- Microservices (we are a monolith on purpose).
+- A second design system on the front.
+- Background runtimes other than Celery in MVP.
+- ORM other than SQLAlchemy 2 (imperative).
+- Provider-specific SDKs in modules — only via `orbiteus_core.ai.providers`.
