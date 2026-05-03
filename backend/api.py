@@ -32,15 +32,8 @@ _BRANDING_DEFAULTS = [
 
 _DEFAULT_SUPERADMIN_EMAIL = settings.bootstrap_admin_email
 _DEFAULT_SUPERADMIN_PASSWORD = settings.bootstrap_admin_password
-_DEFAULT_CRM_PIPELINE = "Sales Pipeline"
-_DEFAULT_CRM_STAGES = [
-    {"name": "Lead", "sequence": 10, "probability": 10.0, "is_won": False, "is_lost": False},
-    {"name": "Qualified", "sequence": 20, "probability": 30.0, "is_won": False, "is_lost": False},
-    {"name": "Proposition", "sequence": 30, "probability": 55.0, "is_won": False, "is_lost": False},
-    {"name": "Negotiation", "sequence": 40, "probability": 75.0, "is_won": False, "is_lost": False},
-    {"name": "Won", "sequence": 90, "probability": 100.0, "is_won": True, "is_lost": False},
-    {"name": "Lost", "sequence": 100, "probability": 0.0, "is_won": False, "is_lost": True},
-]
+# Product seeds (e.g. CRM default stages) live in the module's `bootstrap.py`,
+# not in the engine lifespan. See `modules/crm/bootstrap.py` (PR 9 / ADR-0008).
 
 
 async def _create_tables() -> None:
@@ -150,48 +143,39 @@ async def _reload_rbac_cache() -> None:
         reload_access_cache(access_rows, rule_rows)
 
 
-async def _seed_crm_defaults() -> None:
-    """Ensure CRM has one default pipeline with standard stages."""
+async def _bootstrap_modules() -> None:
+    """Run each module's `bootstrap.on_install()` once per fresh tenant.
+
+    Replaces the legacy `_seed_crm_defaults` (PR 9 / ADR-0008). Modules
+    declare their bootstrap path in `manifest.MANIFEST["bootstrap"]`.
+    """
+    import importlib
+
     from orbiteus_core.context import RequestContext
     from orbiteus_core.db import AsyncSessionFactory
-    from modules.crm.controller.repositories import PipelineRepository, StageRepository
 
     ctx = RequestContext(is_superadmin=True)
+    bootstrap_paths: list[str] = []
+    for mod_name in registry.loaded_modules:
+        try:
+            manifest_mod = importlib.import_module(f"modules.{mod_name}.manifest")
+        except ModuleNotFoundError:
+            continue
+        path = getattr(manifest_mod, "MANIFEST", {}).get("bootstrap")
+        if path:
+            bootstrap_paths.append(path)
+
+    if not bootstrap_paths:
+        return
+
     async with AsyncSessionFactory() as session:
-        pipeline_repo = PipelineRepository(session, ctx)
-        stage_repo = StageRepository(session, ctx)
-
-        default_pipelines, _ = await pipeline_repo.search(domain=[("is_default", "=", True)], limit=1)
-        if default_pipelines:
-            default_pipeline = default_pipelines[0]
-        else:
-            pipelines, _ = await pipeline_repo.search(limit=1)
-            if pipelines:
-                default_pipeline = pipelines[0]
-                if not default_pipeline.is_default:
-                    await pipeline_repo.update(default_pipeline.id, {"is_default": True})
-            else:
-                default_pipeline = await pipeline_repo.create({
-                    "name": _DEFAULT_CRM_PIPELINE,
-                    "description": "Default CRM sales pipeline",
-                    "currency_code": "PLN",
-                    "is_default": True,
-                })
-
-        existing_stages, _ = await stage_repo.search(
-            domain=[("pipeline_id", "=", default_pipeline.id)],
-            limit=200,
-        )
-        existing_names = {s.name.strip().lower() for s in existing_stages}
-        for stage_def in _DEFAULT_CRM_STAGES:
-            if stage_def["name"].strip().lower() in existing_names:
-                continue
-            await stage_repo.create({
-                "pipeline_id": default_pipeline.id,
-                **stage_def,
-            })
-
-        await session.commit()
+        for path in bootstrap_paths:
+            try:
+                module = importlib.import_module(path)
+                if hasattr(module, "on_install"):
+                    await module.on_install(session, ctx)
+            except Exception:
+                logger.exception("module.bootstrap.failed", extra={"module": path})
 
 
 @asynccontextmanager
@@ -202,7 +186,7 @@ async def lifespan(app: FastAPI):
     await _seed_branding()
     await registry.seed_security_to_db()
     await registry.seed_views_to_db()
-    await _seed_crm_defaults()
+    await _bootstrap_modules()
     await _reload_rbac_cache()
     logger.info("Startup complete — RBAC cache loaded.")
     yield

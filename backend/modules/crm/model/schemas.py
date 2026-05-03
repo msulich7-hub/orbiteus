@@ -1,115 +1,121 @@
-"""CRM module Pydantic schemas."""
+"""Pydantic Read/Write schemas for the canonical CRM models (PR 9)."""
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel as PydanticBase
+from pydantic import EmailStr, Field
 
 
-class CustomerRead(BaseModel):
+# ---------------------------------------------------------------------------
+# Person
+# ---------------------------------------------------------------------------
+
+class PersonRead(PydanticBase):
     id: uuid.UUID
-    tenant_id: uuid.UUID | None
-    company_id: uuid.UUID | None
-    name: str
-    email: str | None
-    phone: str | None
-    status: str
-    is_company: bool
-    city: str | None
-    country_code: str
-    assigned_user_id: uuid.UUID | None
-    tags: list[str]
-    create_date: datetime | None = None
-
-    model_config = {"from_attributes": True}
-
-
-class CustomerWrite(BaseModel):
     name: str
     email: str | None = None
     phone: str | None = None
     mobile: str | None = None
+    kind: str
+    is_company: bool
+    assigned_user_id: uuid.UUID | None = None
+    assigned_team_id: uuid.UUID | None = None
+    tags: list[str] = []
+    source: str = ""
+    create_date: datetime | None = None
+    write_date: datetime | None = None
+
+
+class PersonWrite(PydanticBase):
+    name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr | None = None
+    phone: str | None = None
+    mobile: str | None = None
+    kind: str = "contact"
+    is_company: bool = False
+    vat: str | None = None
     website: str | None = None
     street: str | None = None
     city: str | None = None
     country_code: str = "PL"
-    is_company: bool = False
-    vat: str | None = None
-    status: str = "lead"
     assigned_user_id: uuid.UUID | None = None
+    assigned_team_id: uuid.UUID | None = None
     tags: list[str] = []
+    source: str = ""
     notes: str = ""
 
 
-class PipelineRead(BaseModel):
+# ---------------------------------------------------------------------------
+# Stage
+# ---------------------------------------------------------------------------
+
+class StageRead(PydanticBase):
     id: uuid.UUID
     name: str
-    description: str | None
-    currency_code: str
-    is_default: bool
-
-    model_config = {"from_attributes": True}
-
-
-class PipelineWrite(BaseModel):
-    name: str
-    description: str = ""
-    currency_code: str = "PLN"
-    is_default: bool = False
-
-
-class StageRead(BaseModel):
-    id: uuid.UUID
-    name: str
-    pipeline_id: uuid.UUID
     sequence: int
     probability: float
     is_won: bool
     is_lost: bool
-    fold: bool
-
-    model_config = {"from_attributes": True}
+    fold_in_kanban: bool
 
 
-class StageWrite(BaseModel):
-    name: str
-    pipeline_id: uuid.UUID
+class StageWrite(PydanticBase):
+    name: str = Field(..., min_length=1, max_length=255)
     sequence: int = 10
     probability: float = 0.0
     is_won: bool = False
     is_lost: bool = False
-    fold: bool = False
+    fold_in_kanban: bool = False
 
 
-class OpportunityRead(BaseModel):
+# ---------------------------------------------------------------------------
+# Team
+# ---------------------------------------------------------------------------
+
+class TeamRead(PydanticBase):
     id: uuid.UUID
-    tenant_id: uuid.UUID | None
     name: str
-    customer_id: uuid.UUID | None
-    pipeline_id: uuid.UUID | None
-    stage_id: uuid.UUID | None
-    assigned_user_id: uuid.UUID | None
-    expected_revenue: float
-    probability: float
-    close_date: str | None
-    description: str | None
-    lost_reason: str | None
-    tags: list[str]
-    workflow_run_id: str | None
-    create_date: datetime | None = None
-
-    model_config = {"from_attributes": True}
+    description: str
+    leader_user_id: uuid.UUID | None = None
+    member_user_ids: list[uuid.UUID] = []
 
 
-class OpportunityWrite(BaseModel):
+class TeamWrite(PydanticBase):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str = ""
+    leader_user_id: uuid.UUID | None = None
+    member_user_ids: list[uuid.UUID] = []
+
+
+# ---------------------------------------------------------------------------
+# Lead
+# ---------------------------------------------------------------------------
+
+class LeadRead(PydanticBase):
+    id: uuid.UUID
     name: str
-    customer_id: uuid.UUID | None = None
-    pipeline_id: uuid.UUID | None = None
+    person_id: uuid.UUID | None = None
     stage_id: uuid.UUID | None = None
     assigned_user_id: uuid.UUID | None = None
+    assigned_team_id: uuid.UUID | None = None
+    expected_revenue: float
+    probability: float
+    expected_close_date: date | None = None
+    description: str = ""
+    tags: list[str] = []
+
+
+class LeadWrite(PydanticBase):
+    name: str = Field(..., min_length=1, max_length=255)
+    person_id: uuid.UUID | None = None
+    stage_id: uuid.UUID | None = None
+    assigned_user_id: uuid.UUID | None = None
+    assigned_team_id: uuid.UUID | None = None
     expected_revenue: float = 0.0
     probability: float = 0.0
-    close_date: str | None = None
+    expected_close_date: date | None = None
     description: str = ""
+    lost_reason: str = ""
     tags: list[str] = []

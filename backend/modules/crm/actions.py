@@ -1,136 +1,83 @@
-"""CRM module — Action declarations for Command Palette."""
+"""CRM Action declarations (canonical: Person/Lead/Stage/Team)."""
 from orbiteus_core.ai import Action, ActionCategory
 
 ACTIONS = [
-    # --- Customers ---
+    # --- Persons ---
     Action(
-        id="crm.customer.list",
-        label="Customers",
-        keywords=[
-            # EN
-            "customers", "client list", "show customers", "all clients",
-            # PL
-            "klienci", "lista klientów", "pokaż klientów", "klient",
-        ],
-        description="List of all CRM customers",
+        id="crm.person.list",
+        label="Persons",
+        keywords=["persons", "contacts", "people", "list of persons"],
+        description="List of CRM persons (lead/customer/contact)",
         category=ActionCategory.NAVIGATE,
         target="navigate",
-        target_url="/crm/customer",
-        requires_feature="crm.customers.view",
+        target_url="/crm/person",
+        requires_feature="crm.persons.view",
         icon="users",
     ),
     Action(
-        id="crm.customer.create",
-        label="Create Customer",
-        keywords=[
-            # EN
-            "new customer", "add customer", "add client", "create customer",
-            # PL
-            "nowy klient", "dodaj klienta", "utwórz klienta", "nowa firma",
-        ],
-        description="Open form to create a new customer",
+        id="crm.person.create",
+        label="Create Person",
+        keywords=["new person", "add contact", "create person"],
+        description="Open the form to create a person",
         category=ActionCategory.CREATE,
         target="navigate",
-        target_url="/crm/customer/new",
-        requires_feature="crm.customers.manage",
+        target_url="/crm/person/new",
+        requires_feature="crm.persons.manage",
         icon="user-plus",
     ),
+    # --- Leads ---
     Action(
-        id="crm.customer.prospects",
-        label="Prospects & Leads",
-        keywords=[
-            # EN
-            "prospects", "leads", "potential customers", "prospect list",
-            # PL
-            "prospekty", "leady", "potencjalni klienci", "prospekt",
-        ],
-        description="Customers with status prospect or lead",
-        category=ActionCategory.SEARCH,
-        target="navigate",
-        target_url="/crm/customer?status=prospect",
-        requires_feature="crm.customers.view",
-        icon="user-search",
-    ),
-
-    # --- Opportunities ---
-    Action(
-        id="crm.opportunity.list",
-        label="Opportunities",
-        keywords=[
-            # EN
-            "opportunities", "deals", "sales", "deal list",
-            # PL
-            "szanse sprzedaży", "szanse", "deale", "sprzedaż",
-        ],
-        description="List of all sales opportunities",
+        id="crm.lead.list",
+        label="Leads",
+        keywords=["leads", "pipeline", "opportunities", "deals"],
+        description="Sales leads (kanban available)",
         category=ActionCategory.NAVIGATE,
         target="navigate",
-        target_url="/crm/opportunity",
-        requires_feature="crm.customers.view",
+        target_url="/crm/lead",
+        requires_feature="crm.leads.view",
         icon="briefcase",
     ),
     Action(
-        id="crm.opportunity.kanban",
-        label="Sales Pipeline — Kanban",
-        keywords=[
-            # EN
-            "kanban", "pipeline", "deal board", "sales board",
-            # PL
-            "kanban", "pipeline", "tablica szans", "widok kanban",
-        ],
-        description="Kanban board view of the sales pipeline",
-        category=ActionCategory.NAVIGATE,
-        target="navigate",
-        target_url="/crm/opportunity?view=kanban",
-        requires_feature="crm.customers.view",
-        icon="layout-kanban",
-    ),
-    Action(
-        id="crm.opportunity.create",
-        label="Create Opportunity",
-        keywords=[
-            # EN
-            "new opportunity", "add deal", "new deal", "create opportunity",
-            # PL
-            "nowa szansa", "nowy deal", "dodaj szansę", "utwórz szansę",
-        ],
-        description="Open form to create a new sales opportunity",
+        id="crm.lead.create",
+        label="Create Lead",
+        keywords=["new lead", "add lead", "new deal"],
+        description="Open the form to create a lead",
         category=ActionCategory.CREATE,
         target="navigate",
-        target_url="/crm/opportunity/new",
-        requires_feature="crm.customers.manage",
-        icon="plus",
+        target_url="/crm/lead/new",
+        requires_feature="crm.leads.manage",
+        icon="briefcase",
     ),
-
-    # --- Pipelines & Stages ---
     Action(
-        id="crm.pipeline.list",
-        label="Sales Pipelines",
-        keywords=[
-            # EN
-            "pipeline", "sales pipeline", "pipelines", "sales funnel",
-            # PL
-            "pipeline", "lejek sprzedaży", "pipelines", "lejek",
-        ],
-        description="Manage sales pipelines and stages",
-        category=ActionCategory.NAVIGATE,
-        target="navigate",
-        target_url="/crm/pipeline",
-        requires_feature="crm.customers.view",
-        icon="git-branch",
+        id="crm.lead.move_stage",
+        label="Move lead to stage",
+        keywords=["change stage", "advance lead", "move pipeline"],
+        description="Update the stage of an existing lead",
+        category=ActionCategory.EXECUTE,
+        target="api",
+        target_url="/api/crm/lead/{id}/move",
+        requires_feature="crm.leads.manage",
+        icon="arrow-right",
     ),
+    # --- Stages / Teams ---
     Action(
         id="crm.stage.list",
-        label="Opportunity Stages",
-        keywords=[
-            "stages", "opportunity stages", "won lost stage", "pipeline stages",
-            "etapy", "etapy szans", "wygrana przegrana", "kolejnosc etapow",
-        ],
-        description="Define custom CRM stages, order and won/lost flags",
+        label="Stages",
+        keywords=["stages", "pipeline stages"],
         category=ActionCategory.NAVIGATE,
         target="navigate",
         target_url="/crm/stage",
-        requires_feature="crm.customers.view",
-        icon="list-check",
+        requires_feature="crm.stages.view",
+        icon="list",
+    ),
+    Action(
+        id="crm.team.list",
+        label="Sales teams",
+        keywords=["teams", "sales team"],
+        category=ActionCategory.NAVIGATE,
+        target="navigate",
+        target_url="/crm/team",
+        requires_feature="crm.teams.view",
+        icon="user-group",
     ),
 ]

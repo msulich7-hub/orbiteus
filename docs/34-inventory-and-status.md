@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 8 — `feat/ai-layer-byok`).
+> Last reviewed: 2026-05-03 (after PR 9 — `feat/canonical-crm-rename`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -69,7 +69,7 @@
 |---|---|---|
 | `base` | DONE (basic) | Users, Companies, Partners, ir_*; needs `ir_audit_log`, `ir_outbox`, `ir_embedding`, `ir_ai_credential` |
 | `auth` | DONE (basic) | login/refresh/2FA; missing share-link issuance, 15min/jti |
-| `crm` | PARTIAL | Customer/Opportunity/Pipeline/Stage; **rename pending** to Person/Lead/Stage/Team (ADR-0008) |
+| `crm` | DONE (canonical example) | **Person / Lead / Stage / Team** (PR 9, ADR-0008). `bootstrap.py` seeds default stages + Sales team. Demo `ai.py` declares accessible models, callable actions, embeddings, prompts |
 | `hr`, `project`, `social` | NOT STARTED | docs/spec.md only; mark as `Layer: PRODUCT (sample)` post-v1.0 |
 
 ## Admin UI (`admin-ui/`)

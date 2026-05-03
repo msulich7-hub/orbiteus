@@ -1,8 +1,7 @@
-"""CRM business logic.
+"""CRM business logic (canonical: Person/Lead/Stage/Team).
 
 Background side effects (won/lost notifications, follow-ups, audit fan-out)
 go through the Outbox + Celery worker (ADR-0010, ADR-0013, ADR-0015).
-Direct in-process workflow engines are not used in MVP.
 """
 from __future__ import annotations
 
@@ -16,28 +15,28 @@ from orbiteus_core.context import RequestContext
 logger = logging.getLogger(__name__)
 
 
-async def move_opportunity_to_stage(
+async def move_lead_to_stage(
     session: AsyncSession,
     ctx: RequestContext,
-    opportunity_id: uuid.UUID,
+    lead_id: uuid.UUID,
     stage_id: uuid.UUID,
 ) -> None:
-    """Move an opportunity to a new stage.
+    """Move a lead to a new stage.
 
-    Won/lost transitions emit a `crm.opportunity.closed` outbox event, which
-    Celery workers consume to trigger downstream notifications.
+    Won/lost transitions emit a `crm.lead.closed` outbox event for downstream
+    Celery handlers (notifications, KPI rollups, AI summarization).
     """
-    from modules.crm.controller.repositories import OpportunityRepository, StageRepository
+    from modules.crm.controller.repositories import LeadRepository, StageRepository
     from orbiteus_core.outbox import enqueue
 
-    opp_repo = OpportunityRepository(session, ctx)
+    lead_repo = LeadRepository(session, ctx)
     stage_repo = StageRepository(session, ctx)
 
-    opportunity = await opp_repo.get(opportunity_id)  # noqa: F841
+    lead = await lead_repo.get(lead_id)  # noqa: F841
     stage = await stage_repo.get(stage_id)
 
-    await opp_repo.update(
-        opportunity_id,
+    await lead_repo.update(
+        lead_id,
         {"stage_id": stage_id, "probability": stage.probability},
     )
 
@@ -45,13 +44,13 @@ async def move_opportunity_to_stage(
         await enqueue(
             session,
             tenant_id=ctx.tenant_id,
-            event="crm.opportunity.closed",
+            event="crm.lead.closed",
             payload={
-                "opportunity_id": str(opportunity_id),
+                "lead_id": str(lead_id),
                 "outcome": "won" if stage.is_won else "lost",
                 "stage_id": str(stage_id),
             },
             target_kind="notification",
         )
 
-    logger.info("Opportunity %s moved to stage %s", opportunity_id, stage.name)
+    logger.info("crm.lead.moved", extra={"lead_id": str(lead_id), "stage": stage.name})

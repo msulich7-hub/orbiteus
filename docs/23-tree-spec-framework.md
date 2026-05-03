@@ -64,15 +64,15 @@
 
 ## 5. Wave 4 — Canonical CRM
 
-- [ ] 5.1 Rename `crm.customer` → `crm.person` (with `kind` enum)
-- [ ] 5.2 Rename `crm.opportunity` → `crm.lead`
-- [ ] 5.3 Drop `crm.pipeline` (re-introduce in v0.3 if needed) → ADR-0008
-- [ ] 5.4 Add `crm.stage`
-- [ ] 5.5 Add `crm.team` (leader + members)
-- [ ] 5.6 Demo `crm/actions.py` covering create / move stage / assign team
-- [ ] 5.7 Demo `crm/ai.py` (suggested prompts, dashboards)
-- [ ] 5.8 `crm/bootstrap.py` seeds default stages and one team per tenant
-- [ ] 5.9 Aggregate endpoint `/api/base/aggregate`
+- [x] 5.1 Rename `crm.customer` → `crm.person` (with `kind` enum) — PR 9
+- [x] 5.2 Rename `crm.opportunity` → `crm.lead` — PR 9
+- [x] 5.3 Drop `crm.pipeline` (re-introduce in v0.3 if needed) → ADR-0008 — PR 9
+- [x] 5.4 Add `crm.stage` (canonical shape with `fold_in_kanban`) — PR 9
+- [x] 5.5 Add `crm.team` (leader + members) — PR 9
+- [x] 5.6 Demo `crm/actions.py` covering create / move stage — PR 9
+- [x] 5.7 Demo `crm/ai.py` (suggested prompts, dashboards) — PR 9
+- [x] 5.8 `crm/bootstrap.py` seeds default stages and Sales team — PR 9
+- [ ] 5.9 Aggregate endpoint `/api/base/aggregate` — PR 11
 
 ## 6. Wave 5 — Portal scope
 

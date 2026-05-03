@@ -1,14 +1,14 @@
-"""CRM module – RBAC access rights and record rules."""
+"""CRM module — RBAC access rights and record rules (PR 9 canonical)."""
 from __future__ import annotations
 
 import logging
 
-from orbiteus_core.security.rbac import reload_access_cache
-
 logger = logging.getLogger(__name__)
 
+CANONICAL_MODELS = ("crm.person", "crm.lead", "crm.stage", "crm.team")
+
+
 CRM_ACCESS_RIGHTS = [
-    # Sales manager – full access to CRM
     *[
         {
             "role_name": "crm.group_crm_manager",
@@ -18,9 +18,8 @@ CRM_ACCESS_RIGHTS = [
             "perm_create": True,
             "perm_unlink": True,
         }
-        for model in ["crm.customer", "crm.opportunity", "crm.pipeline", "crm.stage"]
+        for model in CANONICAL_MODELS
     ],
-    # Salesman – can create/edit, but sees only their own opportunities (record rule below)
     *[
         {
             "role_name": "crm.group_crm_user",
@@ -30,43 +29,37 @@ CRM_ACCESS_RIGHTS = [
             "perm_create": True,
             "perm_unlink": False,
         }
-        for model in ["crm.customer", "crm.opportunity"]
+        for model in ("crm.person", "crm.lead")
     ],
-    {
-        "role_name": "crm.group_crm_user",
-        "model_name": "crm.pipeline",
-        "perm_read": True,
-        "perm_write": False,
-        "perm_create": False,
-        "perm_unlink": False,
-    },
-    {
-        "role_name": "crm.group_crm_user",
-        "model_name": "crm.stage",
-        "perm_read": True,
-        "perm_write": False,
-        "perm_create": False,
-        "perm_unlink": False,
-    },
+    *[
+        {
+            "role_name": "crm.group_crm_user",
+            "model_name": model,
+            "perm_read": True,
+            "perm_write": False,
+            "perm_create": False,
+            "perm_unlink": False,
+        }
+        for model in ("crm.stage", "crm.team")
+    ],
 ]
+
 
 CRM_RECORD_RULES = [
     {
-        "name": "crm_opportunity_salesman",
-        "model_name": "crm.opportunity",
+        "name": "crm_lead_salesman",
+        "model_name": "crm.lead",
         "roles": ["crm.group_crm_user"],
         "global": False,
-        # Salesman sees only their own opportunities
         "domain": [("assigned_user_id", "=", "current_user")],
     }
 ]
 
 
 def setup() -> None:
-    """Merge CRM access rights into RBAC cache."""
+    """Merge CRM access rights into the RBAC cache."""
     from orbiteus_core.security import rbac
 
-    # Merge with existing access (don't clear base module's entries)
     rbac._model_access.update(
         {
             entry["role_name"]: {
@@ -85,5 +78,7 @@ def setup() -> None:
     for rule in CRM_RECORD_RULES:
         rbac._record_rules.setdefault(rule["model_name"], []).append(rule)
 
-    logger.info("CRM security loaded: %d access entries, %d rules",
-                len(CRM_ACCESS_RIGHTS), len(CRM_RECORD_RULES))
+    logger.info(
+        "CRM security loaded: %d access entries, %d rules",
+        len(CRM_ACCESS_RIGHTS), len(CRM_RECORD_RULES),
+    )

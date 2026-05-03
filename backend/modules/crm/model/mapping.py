@@ -1,56 +1,56 @@
-"""CRM module – SQLAlchemy imperative mapping."""
+"""CRM module — SQLAlchemy imperative mapping (canonical: Person/Lead/Stage/Team)."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 
 from orbiteus_core.auto_router import register_model
 from orbiteus_core.db import metadata
 from orbiteus_core.mapper import make_base_columns, register_mapping
 
-from modules.crm.model.domain import Customer, Opportunity, Pipeline, Stage
 from modules.crm.model import schemas
+from modules.crm.model.domain import Lead, Person, Stage, Team
 
 
-# Module-level table references (set in setup())
-customers_table = None
-pipelines_table = None
-stages_table = None
-opportunities_table = None
+# Module-level table refs (set in setup()).
+persons_table: Table | None = None
+stages_table: Table | None = None
+teams_table: Table | None = None
+leads_table: Table | None = None
 
 
-def _build_tables():
-    from sqlalchemy import Table
-
-    customers = Table(
-        "crm_customers",
+def _build_tables() -> tuple[Table, Table, Table, Table]:
+    persons = Table(
+        "crm_persons",
         metadata,
         *make_base_columns(),
         Column("name", String(255), nullable=False),
-        Column("email", String(255)),
+        Column("email", String(320)),
         Column("phone", String(50)),
         Column("mobile", String(50)),
+        Column("kind", String(20), server_default="contact", index=True),
+        Column("is_company", Boolean, server_default="false"),
+        Column("vat", String(50)),
         Column("website", String(255)),
         Column("street", String(255)),
         Column("city", String(100)),
         Column("country_code", String(5), server_default="PL"),
-        Column("is_company", Boolean, server_default="false"),
-        Column("vat", String(50)),
-        Column("status", String(50), server_default="lead", index=True),
         Column("assigned_user_id", UUID(as_uuid=True), ForeignKey("base_users.id"), nullable=True),
-        Column("partner_id", UUID(as_uuid=True), ForeignKey("base_partners.id"), nullable=True),
+        Column("assigned_team_id", UUID(as_uuid=True), nullable=True),
         Column("tags", JSON, server_default="[]"),
+        Column("source", String(50)),
         Column("notes", Text),
-    )
-
-    pipelines = Table(
-        "crm_pipelines",
-        metadata,
-        *make_base_columns(),
-        Column("name", String(255), nullable=False),
-        Column("description", Text),
-        Column("currency_code", String(10), server_default="PLN"),
-        Column("is_default", Boolean, server_default="false"),
     )
 
     stages = Table(
@@ -58,59 +58,67 @@ def _build_tables():
         metadata,
         *make_base_columns(),
         Column("name", String(255), nullable=False),
-        Column("pipeline_id", UUID(as_uuid=True), ForeignKey("crm_pipelines.id"), nullable=False),
         Column("sequence", Integer, server_default="10"),
         Column("probability", Float, server_default="0"),
         Column("is_won", Boolean, server_default="false"),
         Column("is_lost", Boolean, server_default="false"),
-        Column("fold", Boolean, server_default="false"),
+        Column("fold_in_kanban", Boolean, server_default="false"),
     )
 
-    opportunities = Table(
-        "crm_opportunities",
+    teams = Table(
+        "crm_teams",
         metadata,
         *make_base_columns(),
         Column("name", String(255), nullable=False),
-        Column("customer_id", UUID(as_uuid=True), ForeignKey("crm_customers.id"), nullable=True),
-        Column("pipeline_id", UUID(as_uuid=True), ForeignKey("crm_pipelines.id"), nullable=True),
+        Column("description", Text),
+        Column("leader_user_id", UUID(as_uuid=True), ForeignKey("base_users.id"), nullable=True),
+        # JSONB list of base.user UUIDs (cross-module FK kept as UUID per ADR / docs/03).
+        Column("member_user_ids", JSON, server_default="[]"),
+    )
+
+    leads = Table(
+        "crm_leads",
+        metadata,
+        *make_base_columns(),
+        Column("name", String(255), nullable=False),
+        Column("person_id", UUID(as_uuid=True), ForeignKey("crm_persons.id"), nullable=True),
         Column("stage_id", UUID(as_uuid=True), ForeignKey("crm_stages.id"), nullable=True),
         Column("assigned_user_id", UUID(as_uuid=True), ForeignKey("base_users.id"), nullable=True),
+        Column("assigned_team_id", UUID(as_uuid=True), ForeignKey("crm_teams.id"), nullable=True),
         Column("expected_revenue", Float, server_default="0"),
         Column("probability", Float, server_default="0"),
-        Column("close_date", String(50)),
+        Column("expected_close_date", Date),
         Column("description", Text),
         Column("lost_reason", String(500)),
         Column("tags", JSON, server_default="[]"),
-        Column("workflow_run_id", String(255)),
     )
 
-    return customers, pipelines, stages, opportunities
+    return persons, stages, teams, leads
 
 
 def setup() -> None:
     """Called by ModuleRegistry during module load."""
-    global customers_table, pipelines_table, stages_table, opportunities_table
+    global persons_table, stages_table, teams_table, leads_table
 
-    customers_table, pipelines_table, stages_table, opportunities_table = _build_tables()
+    persons_table, stages_table, teams_table, leads_table = _build_tables()
 
-    register_mapping(Customer, customers_table)
-    register_mapping(Pipeline, pipelines_table)
+    register_mapping(Person, persons_table)
     register_mapping(Stage, stages_table)
-    register_mapping(Opportunity, opportunities_table)
+    register_mapping(Team, teams_table)
+    register_mapping(Lead, leads_table)
 
-    # Register for auto-CRUD
     from modules.crm.controller.repositories import (
-        CustomerRepository,
-        OpportunityRepository,
-        PipelineRepository,
+        LeadRepository,
+        PersonRepository,
         StageRepository,
+        TeamRepository,
     )
 
-    register_model("crm.customer", Customer, CustomerRepository, customers_table,
-                   schemas.CustomerRead, schemas.CustomerWrite)
-    register_model("crm.pipeline", Pipeline, PipelineRepository, pipelines_table,
-                   schemas.PipelineRead, schemas.PipelineWrite)
+    register_model("crm.person", Person, PersonRepository, persons_table,
+                   schemas.PersonRead, schemas.PersonWrite)
     register_model("crm.stage", Stage, StageRepository, stages_table,
                    schemas.StageRead, schemas.StageWrite)
-    register_model("crm.opportunity", Opportunity, OpportunityRepository, opportunities_table,
-                   schemas.OpportunityRead, schemas.OpportunityWrite)
+    register_model("crm.team", Team, TeamRepository, teams_table,
+                   schemas.TeamRead, schemas.TeamWrite)
+    register_model("crm.lead", Lead, LeadRepository, leads_table,
+                   schemas.LeadRead, schemas.LeadWrite)
