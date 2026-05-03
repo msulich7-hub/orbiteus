@@ -2,10 +2,16 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+# Build context is monorepo root → workspaces resolve `@orbiteus/ui` (ADR-0016).
+COPY package.json package-lock.json ./
+COPY admin-ui/package.json ./admin-ui/
+COPY portal-ui/package.json ./portal-ui/
+COPY packages ./packages
 
-COPY . .
+RUN npm install --include=dev
+
+COPY admin-ui ./admin-ui
+COPY packages ./packages
 
 ARG BACKEND_URL=http://backend:8000
 ARG NEXT_PUBLIC_DEMO_LOGIN_EMAIL=
@@ -15,21 +21,20 @@ ENV NEXT_PUBLIC_DEMO_LOGIN_EMAIL=${NEXT_PUBLIC_DEMO_LOGIN_EMAIL}
 ENV NEXT_PUBLIC_DEMO_LOGIN_PASSWORD=${NEXT_PUBLIC_DEMO_LOGIN_PASSWORD}
 ENV NEXT_TELEMETRY_DISABLED=1
 
+WORKDIR /app/admin-ui
 RUN npm run build
 
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/admin-ui/.next ./.next
+COPY --from=builder /app/admin-ui/node_modules ./node_modules
+COPY --from=builder /app/admin-ui/package.json ./
+COPY --from=builder /app/admin-ui/public ./public
+COPY --from=builder /app/admin-ui/next.config.js ./
 
 EXPOSE 3000
-
 CMD ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]

@@ -175,7 +175,8 @@ async def _bootstrap_modules() -> None:
                 if hasattr(module, "on_install"):
                     await module.on_install(session, ctx)
             except Exception:
-                logger.exception("module.bootstrap.failed", extra={"module": path})
+                # `module` is reserved on LogRecord; use a custom key.
+                logger.exception("module.bootstrap.failed", extra={"module_path": path})
 
 
 @asynccontextmanager

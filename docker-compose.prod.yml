@@ -148,8 +148,8 @@ services:
 
   frontend:
     build:
-      context: ./admin-ui
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: admin-ui/Dockerfile.prod
       args:
         BACKEND_URL: http://backend:8000
     environment:
@@ -160,8 +160,8 @@ services:
 
   portal:
     build:
-      context: ./portal-ui
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: portal-ui/Dockerfile.prod
       args:
         BACKEND_URL: http://backend:8000
     environment:

@@ -70,16 +70,18 @@ services:
 
   frontend:
     build:
-      context: ./admin-ui
-      dockerfile: Dockerfile
+      # Monorepo root context so npm workspaces resolve `@orbiteus/ui`.
+      context: .
+      dockerfile: admin-ui/Dockerfile
     ports:
       - "3000:3000"
     environment:
       BACKEND_URL: http://backend:8000
     volumes:
-      - ./admin-ui:/app
-      - /app/node_modules
-      - /app/.next
+      - ./admin-ui:/app/admin-ui
+      - ./packages:/app/packages
+      - /app/admin-ui/node_modules
+      - /app/admin-ui/.next
     depends_on:
       - backend
     command: npm run dev -- --hostname 0.0.0.0
