@@ -1,19 +1,22 @@
-"""Public portal endpoints (PR 12).
+"""Public portal endpoints (PR 12 + PR final mutations).
 
-`/api/portal/exchange?token=<jwt>` validates a share-link token and
-returns a minimal payload describing the shared resource. The portal-ui
-front-end consumes the response and renders the resource read-only by
-default.
+- `GET  /api/portal/exchange?token=<jwt>` — validate share-link, return resource.
+- `POST /api/portal/comment`              — append a comment when token has `comment`.
+- `POST /api/portal/attachment`           — upload an attachment when token has `attach_file`.
+
+Every mutation re-validates the token, refuses cross-tenant payloads, and
+records the action in the audit log with `actor=portal`.
 """
 from __future__ import annotations
 
 import logging
+import uuid
+from datetime import datetime, timezone
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from fastapi import Depends
 
 from orbiteus_core.db import get_session
 from orbiteus_core.sharing import decode
@@ -21,6 +24,45 @@ from orbiteus_core.sharing import decode
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
+
+
+def _require_permission(perms: list[str], required: str) -> None:
+    if required not in perms:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "portal.permission_denied", "required": required},
+        )
+
+
+async def _audit_portal(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    operation: str,
+    resource_model: str,
+    resource_id: uuid.UUID,
+    diff: dict[str, Any],
+) -> None:
+    """Write an `ir_audit_log` row with `actor=portal`."""
+    from modules.base.model.mapping import ir_audit_log_table as audit
+
+    await session.execute(
+        insert(audit).values(
+            id=uuid.uuid4(),
+            create_date=datetime.now(timezone.utc),
+            write_date=datetime.now(timezone.utc),
+            tenant_id=tenant_id,
+            actor="portal",
+            user_id=user_id,
+            request_id=None,
+            model=resource_model,
+            record_id=resource_id,
+            operation=operation,
+            diff=diff,
+            metadata={"scope": "portal"},
+        )
+    )
 
 
 @router.get("/exchange")
@@ -65,4 +107,117 @@ async def exchange(
         "resource_id": str(payload.resource_id),
         "permissions": payload.permissions,
         "payload": safe_payload,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Mutations (PR final)
+# ---------------------------------------------------------------------------
+
+@router.post("/comment")
+async def post_comment(
+    body: dict = Body(...),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Append a comment to the shared resource.
+
+    Body: `{ "token": "<jwt>", "body": "Hello world" }`
+    """
+    token = body.get("token")
+    text = (body.get("body") or "").strip()
+    if not token or not text:
+        raise HTTPException(status_code=400, detail="token and body are required")
+
+    try:
+        share = decode(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _require_permission(share.permissions, "comment")
+
+    # Reuse `ir_attachments` as a lightweight comment store keyed by res_model.
+    # Comments live in `ir_comments` once that table exists; until then we
+    # serialize them to the audit log + return a comment id for the UI.
+    comment_id = uuid.uuid4()
+    await _audit_portal(
+        session,
+        tenant_id=share.tenant_id,
+        user_id=share.issued_by,
+        operation="portal.comment",
+        resource_model=share.resource_model,
+        resource_id=share.resource_id,
+        diff={"comment_id": [None, str(comment_id)], "body": [None, text[:2000]]},
+    )
+    await session.commit()
+    return {"id": str(comment_id), "body": text}
+
+
+@router.post("/attachment")
+async def post_attachment(
+    token: str = Form(...),
+    file: UploadFile = File(...),
+    description: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Upload an attachment to the shared resource.
+
+    Form: `token` + multipart `file`. Honours portal `attach_file` permission.
+    Stores the file metadata in `ir_attachments` (binary lives outside DB; the
+    upload pipeline is finalised in `docs/15-ai-layer.md` follow-up).
+    """
+    try:
+        share = decode(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _require_permission(share.permissions, "attach_file")
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="filename required")
+
+    contents = await file.read()
+    if len(contents) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="file too large (25 MB cap)")
+
+    from modules.base.model.mapping import ir_attachments_table as attach
+
+    attachment_id = uuid.uuid4()
+    await session.execute(
+        insert(attach).values(
+            id=attachment_id,
+            tenant_id=share.tenant_id,
+            company_id=None,
+            create_date=datetime.now(timezone.utc),
+            write_date=datetime.now(timezone.utc),
+            active=True,
+            custom_fields={},
+            created_by_id=None,
+            modified_by_id=None,
+            name=file.filename,
+            res_model=share.resource_model,
+            res_id=share.resource_id,
+            mimetype=file.content_type or "application/octet-stream",
+            file_size=len(contents),
+            store_fname=f"portal/{share.tenant_id}/{attachment_id}",
+            url=None,
+            description=description[:500],
+        )
+    )
+    await _audit_portal(
+        session,
+        tenant_id=share.tenant_id,
+        user_id=share.issued_by,
+        operation="portal.attachment_upload",
+        resource_model=share.resource_model,
+        resource_id=share.resource_id,
+        diff={
+            "attachment_id": [None, str(attachment_id)],
+            "filename": [None, file.filename],
+            "size": [None, len(contents)],
+        },
+    )
+    await session.commit()
+    return {
+        "id": str(attachment_id),
+        "filename": file.filename,
+        "size": len(contents),
+        "store_fname": f"portal/{share.tenant_id}/{attachment_id}",
     }

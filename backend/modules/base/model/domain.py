@@ -74,6 +74,8 @@ class User(BaseModel):
     role_ids: list[uuid.UUID] = field(default_factory=list)     # stored as JSONB
     totp_secret: str | None = None
     totp_enabled: bool = False
+    # PR final: bcrypt-hashed list of single-use TOTP recovery codes.
+    recovery_codes_hashed: list[str] = field(default_factory=list)
     last_login: datetime | None = None
     language: str = "pl"
     timezone: str = "Europe/Warsaw"

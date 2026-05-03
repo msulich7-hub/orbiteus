@@ -110,6 +110,14 @@ class TOTPVerifyRequest(BaseModel):
     code: str
 
 
+class RecoveryCodesResponse(BaseModel):
+    codes: list[str]
+    note: str = (
+        "Store these one-time codes somewhere safe. They are shown ONCE; "
+        "regenerate any time via POST /api/auth/2fa/recovery-codes."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -137,7 +145,7 @@ async def login(
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account disabled")
 
-    # TOTP check
+    # TOTP check (incl. recovery codes — PR final).
     if user.totp_enabled:
         if not payload.totp_code:
             return TokenResponse(
@@ -145,12 +153,25 @@ async def login(
                 refresh_token="",
                 requires_totp=True,
             )
-        totp = pyotp.TOTP(user.totp_secret)
-        if not totp.verify(payload.totp_code):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid TOTP code",
-            )
+
+        # Recovery codes path: alphanumeric format, single-use.
+        from orbiteus_core.security.recovery_codes import (
+            normalize as _normalize_code,
+            verify_and_consume as _verify_recovery,
+        )
+
+        normalized = _normalize_code(payload.totp_code)
+        ok_recovery, remaining = _verify_recovery(normalized, list(user.recovery_codes_hashed or []))
+        if ok_recovery:
+            await repo.update(user.id, {"recovery_codes_hashed": remaining})
+            await session.commit()
+        else:
+            totp = pyotp.TOTP(user.totp_secret)
+            if not totp.verify(payload.totp_code):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid TOTP code",
+                )
 
     # For now, issue a token with the first available company to avoid
     # blocking users when the frontend has no dedicated company picker yet.
@@ -338,6 +359,30 @@ async def verify_totp(
 
     await repo.update(ctx.user_id, {"totp_enabled": True})
     return {"message": "2FA enabled successfully"}
+
+
+@router.post("/2fa/recovery-codes", response_model=RecoveryCodesResponse)
+async def regenerate_recovery_codes(
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> RecoveryCodesResponse:
+    """(Re)generate single-use TOTP recovery codes for the current user.
+
+    Replaces any existing codes. The plain values are shown ONCE in the
+    response — the server stores only bcrypt hashes.
+    """
+    from modules.base.controller.repositories import UserRepository
+    from orbiteus_core.security.recovery_codes import generate_codes
+
+    repo = UserRepository(session, ctx)
+    user = await repo.get(ctx.user_id)
+    if not user.totp_enabled:
+        raise HTTPException(status_code=400, detail="Enable TOTP first")
+
+    plain, hashed = generate_codes()
+    await repo.update(ctx.user_id, {"recovery_codes_hashed": hashed})
+    await session.commit()
+    return RecoveryCodesResponse(codes=plain)
 
 
 # ---------------------------------------------------------------------------

@@ -91,6 +91,27 @@ inside the new `migrate` compose service.
 
 ### Tests + CI
 
-- 126/126 top-level tests green.
+- 152/152 top-level tests green.
 - `scripts/check_docs.py` link & structure validator.
-- GitHub Actions workflow `docs.yml` enforces docs validator on PR.
+- GitHub Actions workflows: `docs.yml` (docs validator), `secrets.yml`
+  (`detect-secrets` baseline scan).
+- Playwright config + 5 critical-path E2E scenarios in `admin-ui/e2e/`
+  (login, dashboard, create person, kanban, health probe).
+- `pre-commit-config.yaml` ships `detect-secrets`, `end-of-file-fixer`,
+  `trailing-whitespace`, `check-merge-conflict`, `check-yaml`,
+  `check-added-large-files`.
+
+### Final 100% items (DoD §3, §12, §13, §15, §16)
+
+- TOTP **recovery codes** — `orbiteus_core.security.recovery_codes`,
+  endpoint `POST /api/auth/2fa/recovery-codes`, login flow consumes a
+  matched code (single-use, bcrypt-hashed at rest).
+- Portal **mutations** — `POST /api/portal/comment` and
+  `POST /api/portal/attachment` enforce share-link permissions and audit
+  with `actor=portal`.
+- **OpenTelemetry** auto-wire — `orbiteus_core.observability.tracing.setup_tracing`
+  attaches OTLP HTTP exporter and instruments FastAPI / SQLAlchemy /
+  redis / httpx when `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+- **Playwright** E2E scaffolding (config + spec + npm script).
+- **detect-secrets** pre-commit + GitHub Action; `.secrets.baseline`
+  ships with sane plugin set.

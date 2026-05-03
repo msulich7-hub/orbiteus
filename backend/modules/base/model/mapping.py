@@ -8,6 +8,7 @@ from __future__ import annotations
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     JSON,
@@ -118,6 +119,8 @@ users_table = Table(
     Column("role_ids", JSON, nullable=False, server_default="[]"),
     Column("totp_secret", String(64)),
     Column("totp_enabled", Boolean, server_default="false"),
+    # JSON list of bcrypt-hashed one-time recovery codes (PR final).
+    Column("recovery_codes_hashed", JSON, nullable=False, server_default="[]"),
     Column("last_login", String(50)),
     Column("language", String(10), server_default="pl"),
     Column("timezone", String(50), server_default="Europe/Warsaw"),

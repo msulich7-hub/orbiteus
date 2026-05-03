@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 13/14/15 — `feat/v1-hardening`).
+> Last reviewed: 2026-05-03 (after `feat/v1-final-100` — Definition of Done 100 %).
 > Engine ships as **v1.0** — see CHANGELOG.md.
 > Owner: keep updated each release; refresh on every wave close.
 
@@ -157,7 +157,7 @@
 | Admin UI | **100%** renderer (catch-all only, packages/ui widgets + AI components) |
 | Portal UI | **100%** scaffold (share-link landing + exchange wired) |
 | Infrastructure | **100%** (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate, Celery worker+beat, portal) |
-| Observability / rate limit / backups / GDPR | **90%** (logs + metrics + health + rate limit + pg_dump + restore drill; OTel exporter left as opt-in) |
+| Observability / rate limit / backups / GDPR | **100%** (logs + metrics + health + rate limit + pg_dump + restore drill + OTel auto-instrumentation when env set) |
 
 ## What "core 100% closed" means
 

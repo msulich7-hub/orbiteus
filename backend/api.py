@@ -249,6 +249,10 @@ def create_app() -> FastAPI:
     from orbiteus_core.portal_router import router as portal_router
     app.include_router(portal_router)
 
+    # OpenTelemetry instrumentation (no-op unless OTEL_EXPORTER_OTLP_ENDPOINT set).
+    from orbiteus_core.observability.tracing import setup_tracing
+    setup_tracing(app)
+
     # AI-native layer — Command Palette endpoint
     from orbiteus_core.ai.router import router as ai_router
     app.include_router(ai_router)
