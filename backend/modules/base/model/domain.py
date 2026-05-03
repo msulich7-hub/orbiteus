@@ -277,3 +277,36 @@ class IrAuditLog(SystemModel):
     operation: str = ""            # "create" | "update" | "delete" | "tool_call" | "login" | ...
     diff: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Outbox (PR 4) — durable side-effect queue committed with the business txn.
+# Drained by Celery workers in PR 5. See docs/12-events-and-queues.md.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class IrOutbox(SystemModel):
+    """Durable side-effect intent — drained by Celery workers."""
+
+    tenant_id: uuid.UUID | None = None
+    status: str = "pending"          # "pending" | "processing" | "done" | "dead"
+    event: str = ""                  # logical name, e.g. "record.created"
+    payload: dict[str, Any] = field(default_factory=dict)
+    target_kind: str | None = None   # dispatcher hint: "webhook" | "email" | ...
+    target_ref: str | None = None    # dispatcher ref: subscriber id / template id
+    retries: int = 0
+    next_run_at: datetime | None = None
+    last_error: str | None = None
+
+
+@dataclass
+class IrWebhook(BaseModel):
+    """Outbound webhook subscriber (Standard-Webhooks-style delivery)."""
+
+    name: str = ""
+    url: str = ""
+    secret: str = ""                 # HMAC-SHA256 signing key
+    event_mask: list[str] = field(default_factory=list)  # ["record.created", ...]
+    is_active: bool = True
+    last_delivery_at: datetime | None = None
+    last_delivery_status: str = ""

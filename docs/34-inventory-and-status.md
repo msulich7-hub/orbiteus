@@ -3,7 +3,7 @@
 > Honest snapshot of what exists in the codebase today versus what the new
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after PR 3 — `feat/repo-hooks-and-audit`).
+> Last reviewed: 2026-05-03 (after PR 4 — `feat/postgres-outbox`).
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -27,7 +27,8 @@
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
 | **EventBus (in-process)** | DONE | `orbiteus_core/events.py` | sync error isolation, decorator subscribe |
-| **Postgres Outbox (`ir_outbox`)** | MISSING | — | PR 4 |
+| **Postgres Outbox (`ir_outbox`)** | DONE | `orbiteus_core/outbox.py`, `IrOutbox`, `outbox_dispatcher.py`, migration `b2a4e1c0d003` | dispatcher subscribed to `record.*`; webhook delivery in PR 5 |
+| **Webhooks (`ir_webhooks`)** | DONE (table + dispatcher) | `IrWebhook`, dispatcher fan-out per active subscriber | actual HTTP delivery in PR 5 |
 | **Repository hooks (before/after)** | DONE | `BaseRepository._before_/_after_*` + EventBus | tests in `tests/test_eventbus.py` |
 | **created_by / modified_by columns** | DONE | `make_base_columns`, `BaseModel` | populated in `BaseRepository.create/update/delete` |
 | **FK resolution `{field}__name`** | MISSING | — | needed for CRM-MVP |

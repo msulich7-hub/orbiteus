@@ -37,10 +37,12 @@ from modules.base.model.domain import (
     IrModel,
     IrModelAccess,
     IrModelField,
+    IrOutbox,
     IrRule,
     IrSequence,
     IrUiMenu,
     IrUiView,
+    IrWebhook,
     Partner,
     Tenant,
     User,
@@ -313,6 +315,36 @@ ir_audit_log_table = Table(
     Column("metadata", JSON, nullable=False, server_default="{}"),
 )
 
+ir_outbox_table = Table(
+    "ir_outbox",
+    metadata,
+    *make_system_columns(),
+    Column("tenant_id", UUID(as_uuid=True), nullable=True, index=True),
+    Column("status", String(20), nullable=False, server_default="pending", index=True),
+    Column("event", String(255), nullable=False, index=True),
+    Column("payload", JSON, nullable=False, server_default="{}"),
+    Column("target_kind", String(50), nullable=True, index=True),
+    Column("target_ref", String(255), nullable=True),
+    Column("retries", Integer, nullable=False, server_default="0"),
+    Column("next_run_at", String(50), nullable=True, index=True),
+    # last_error stays a Text — Postgres truncates anything sane.
+    Column("last_error", Text, nullable=True),
+)
+
+ir_webhooks_table = Table(
+    "ir_webhooks",
+    metadata,
+    *make_base_columns(),
+    Column("name", String(255), nullable=False),
+    Column("url", String(2048), nullable=False),
+    Column("secret", String(255), nullable=False),
+    # JSON list of event names this subscriber listens to (e.g. "record.created").
+    Column("event_mask", JSON, nullable=False, server_default="[]"),
+    Column("is_active", Boolean, nullable=False, server_default="true"),
+    Column("last_delivery_at", String(50), nullable=True),
+    Column("last_delivery_status", String(50), nullable=True),
+)
+
 
 # ---------------------------------------------------------------------------
 # Register imperative mappings
@@ -338,6 +370,8 @@ def setup() -> None:
     register_mapping(IrAttachment, ir_attachments_table)
     register_mapping(IrUiView, ir_ui_views_table)
     register_mapping(IrAuditLog, ir_audit_log_table)
+    register_mapping(IrOutbox, ir_outbox_table)
+    register_mapping(IrWebhook, ir_webhooks_table)
 
     _register_auto_crud()
 

@@ -28,7 +28,7 @@
 - [x] 2.2 `created_by_id` / `modified_by_id` columns — PR 3
 - [x] 2.3 `ir_audit_log` (mandatory, opt-out) → ADR-0010 — PR 3
 - [x] 2.4a EventBus (in-process) — PR 3
-- [ ] 2.4b Postgres Outbox — PR 4
+- [x] 2.4b Postgres Outbox + dispatcher + webhooks table — PR 4
 - [ ] 2.5 Many2one resolution in API responses (`{field}__name`)
 - [ ] 2.6 Move `_seed_crm_defaults` out of `api.py` to `modules/crm/bootstrap.py`
 - [x] 2.7 `migrate` service in compose + Alembic advisory lock — PR 2

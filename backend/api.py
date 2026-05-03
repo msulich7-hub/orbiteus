@@ -246,6 +246,10 @@ def create_app() -> FastAPI:
     # Bootstrap: load mappings, register routes, seed security
     registry.bootstrap(app)
 
+    # Wire the outbox dispatcher onto record.* events (PR 4 / ADR-0010).
+    from orbiteus_core.outbox_dispatcher import register_dispatchers
+    register_dispatchers()
+
     # AI-native layer — Command Palette endpoint
     from orbiteus_core.ai.router import router as ai_router
     app.include_router(ai_router)
