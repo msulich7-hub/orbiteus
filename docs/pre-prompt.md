@@ -286,6 +286,40 @@ docs/adr/                       — architectural decision records
   candidate `docs/28-open-questions.md` entry and request confirmation before
   implementing.
 
+## 13. Consciously deferred framework primitives (post-v1.0)
+
+These primitives are **deliberately out of scope for v1.0**. Do NOT
+"close the gap" on them by silently adding them to the framework —
+that would put a half-baked subsystem on the critical path of every
+module and lock the engine into an architectural decision that
+deserves an ADR + a wave of its own.
+
+If the user's request implies one of these, propose it as an ADR
+and a separate wave; never improvise it inline.
+
+| Subsystem                        | Status        | Why deferred / where it lands |
+|----------------------------------|---------------|-------------------------------|
+| Generic workflow engine          | NOT in v1.0   | Temporal explicitly excluded (ADR-0015). When sagas materialise we'll either pick a thin Postgres-backed FSM (a la `django-fsm`) or revisit Temporal — but not before a real consumer needs it. |
+| `<AIDashboard>` UI                | UI placeholder | Backend `/api/ai/dashboard` is scaffolded; the React component renders a placeholder until the dashboard wave (NL prompt → aggregate spec → recharts). |
+| Computed (derived) fields        | NOT in v1.0   | Today modules denormalise on write or derive in the read schema. Generic `@computed` decorator + dependency graph is a wave on its own. |
+| `onchange` engine                | NOT in v1.0   | Form-level reactive recompute (Odoo-style). Same justification — subsystem-sized. |
+| CSV import / export              | NOT in v1.0   | Single-shot endpoints exist for individual models; a generic `ir_import` mapping engine is post-v1.0. |
+| Field-level RBAC                 | NOT in v1.0   | Today the granularity is model + record-rule. Per-field read/write masks need a registry primitive + UI binding pass. |
+| Multi-company switch endpoint    | NOT in v1.0   | The data model has `company_id`; a `POST /api/auth/select-company` exists but the UX flow (home shell, badge, scope hint) is post-v1.0. |
+| PDF reports                      | NOT in v1.0   | Jinja → headless Chromium / WeasyPrint pipeline. Big enough to deserve its own ADR. |
+| Mail templates (`IrMailTemplate`)| NOT in v1.0   | `orbiteus_core/mail.py` covers the transport. Template-driven mail (rendering + per-tenant overrides) waits for the mail wave. |
+| Attachments upload UI            | NOT in v1.0   | `ir_attachments` table + portal upload work; admin-ui drag-and-drop into form views is post-v1.0. |
+| Per-module backend coverage thresholds | NOT in v1.0 | Host-side `pytest --cov` under-reports the integration paths that actually run inside the backend container; raising `orbiteus_core ≥ 90 %`, etc. requires an in-container coverage collector. Total 80 % is enforced today. |
+| AI move-the-lead E2E             | Seeded variant | Lives behind `E2E_FULL_SUITE=1` in `admin-ui/e2e/` — runs only on the release pipeline once the demo tenant is seeded. |
+| `detect-secrets` pre-commit hook | NOT in v1.0   | CI scans deps via `pip-audit` + `npm audit`; a local `detect-secrets` baseline is a hardening pass. |
+
+The full per-section progress (16 sections / 80 in-scope checkboxes,
+83/90 done) is the running ledger in
+`docs/34-inventory-and-status.md` (section "DoD checklist progress").
+That file is the single source of truth for "is the framework v1.0
+yet?" — the table above is the place to look up *why* a residual
+checkbox is still open.
+
 ---
 
 End of Orbiteus pre-prompt. Now read the user's request.
