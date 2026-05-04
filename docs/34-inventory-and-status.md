@@ -37,7 +37,7 @@
 | **Webhooks (`ir_webhooks`)** | DONE | `IrWebhook` + per-model + per-field filters + optional auth header (migration `f6a1b2c3d007`); dispatcher in `outbox_dispatcher.py`; admin UI at `/technical/webhooks`; `POST /api/base/webhooks/{id}/test` for synthetic delivery | HMAC `X-Orbiteus-Signature` unconditional. Tested by `tests/test_webhook_delivery.py` (signed POST + retry→dead-letter on 5xx). |
 | **Repository hooks (before/after)** | DONE | `BaseRepository._before_/_after_*` + EventBus | tests in `tests/test_eventbus.py` |
 | **created_by / modified_by columns** | DONE | `make_base_columns`, `BaseModel` | populated in `BaseRepository.create/update/delete` |
-| **FK resolution `{field}__name`** | MISSING | — | needed for CRM-MVP |
+| **FK resolution `{field}__name`** | DONE | `orbiteus_core/auto_router.py:_expand_many2one` (opt-in via `?expand=field1,field2`; tenant-scoped + record-rule filtered; first-match display column from `name`/`label`/`title`/`email`/`code`); `admin-ui/src/components/ResourceList.tsx` auto-passes every many2one column to `expand`; `lib/formatters.ts:displayMany2oneCell` consumes `<field>__name` | tested by `tests/test_fk_resolution.py` (4 cases: resolve, no-leak without expand, NULL FK, unknown column ignored) |
 | **Sequences `next_val()`** | STUB | `IrSequence` row only | core wave 2 |
 | **Attachments upload/download** | STUB | `IrAttachment` row only | core wave 3 |
 | **Mail/SMTP send** | PARTIAL | `orbiteus_core/mail.py` (dev-log fallback when `smtp_host=""`, `aiosmtplib` SMTP+STARTTLS in prod); used by `/api/auth/password/{request,reset}`. `IrMailTemplate` table still untouched. | template-driven send is wave 3 |
@@ -97,7 +97,7 @@
 | Command Palette ⌘K | DONE | `components/CommandPalette.tsx` | — |
 | Branding | DONE | `lib/branding.tsx` | — |
 | **Hardcoded CRM/base/technical pages** | DELETED | catch-all `[module]/[model]` only | PR 10 |
-| **Many2one widget** | PARTIAL | `widgets/Many2OneField.tsx` | needs FK resolution from API |
+| **Many2one widget** | DONE | `widgets/Many2OneField.tsx` (form input) + list cells via `displayMany2oneCell` reading `<field>__name` from `?expand=...` payload | FK resolution wired end-to-end |
 | **Badge widget** | PARTIAL | `widgets/StatusBadge.tsx` | not wired to lists |
 | **Monetary widget** | DONE | `components/widgets/MonetaryField.tsx` (`MonetaryCell` for list cells, `MonetaryInput` for form input; reads `currency_code` from ui-config FieldMeta, falls back to `PLN`); backend serves `currency_code` in `/api/base/ui-config` for every `monetary` field | tested by `components/widgets/MonetaryField.test.tsx` (7 cases) |
 | **Statusbar widget** | PARTIAL | `widgets/StatusbarField.tsx` | not wired to lead.stage |

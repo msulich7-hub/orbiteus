@@ -67,6 +67,23 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.fixture(autouse=True)
+def _flush_buckets_before_each_test():
+    """Drop every `rl:*` key so a previous test's traffic doesn't
+    pre-warm the IP bucket and turn this test into a flaky 429.
+
+    Earlier integration tests in the suite (`test_password_reset`,
+    `test_aggregate_endpoint`, `test_fk_resolution`) call register +
+    login from the same localhost, so they share the IP bucket with
+    these. Without an autouse flush the rate-limit suite has to wait
+    a full minute for the previous tests' rate-limit window to roll
+    over.
+    """
+    _flush_redis_pattern("rl:*")
+    yield
+    _flush_redis_pattern("rl:*")
+
+
 def _register_user(prefix: str = "rl") -> tuple[str, str]:
     """Bootstrap a fresh tenant + user via `/api/auth/register`.
 

@@ -110,6 +110,18 @@ export default function ResourceList({
     };
   }, []);
 
+  // Auto-`?expand=...` for every many2one column we know about — saves
+  // the consumer wiring it manually and turns FK UUIDs into readable
+  // labels (e.g. "Acme Corp" instead of "06548faf-..."). DoD §9.4.
+  const expandFields = useMemo(() => {
+    if (!fieldMeta?.length) return "";
+    const m2o = displayColumns
+      .map((col) => fieldMeta.find((f) => f.name === col.key))
+      .filter((f) => f?.type === "many2one")
+      .map((f) => f!.name);
+    return m2o.join(",");
+  }, [displayColumns, fieldMeta]);
+
   // Fetch data when resource, page, search, sort, or refresh signal changes
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
@@ -123,11 +135,12 @@ export default function ResourceList({
       params.order_by = orderBy;
       params.order_dir = orderDir;
     }
+    if (expandFields) params.expand = expandFields;
     fetchList(resource, params)
       .then((d) => { setItems(d.items ?? []); setTotal(d.total ?? 0); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [resource, page, searchQuery, orderBy, orderDir, pageSize, refreshTick]);
+  }, [resource, page, searchQuery, orderBy, orderDir, pageSize, refreshTick, expandFields]);
 
   // Realtime: when any other tab / browser mutates this list under the
   // same tenant, the SSE backplane emits `record.created/updated/deleted`

@@ -102,6 +102,100 @@ def _parse_query_domain(params: dict[str, str]) -> tuple[list[tuple], str | None
     return domain, order_by, order_dir
 
 
+# Display columns we'll try, in order, when the target model has a `name`-like
+# column. Anything beyond the first match is ignored.
+_DISPLAY_COL_CANDIDATES = ("name", "label", "title", "email", "code")
+
+
+async def _expand_many2one(
+    items: list[dict[str, Any]],
+    *,
+    expand_fields: list[str],
+    model_name: str,
+    session: AsyncSession,
+    ctx: RequestContext,
+) -> None:
+    """Mutate `items` in place, adding `<field>__name` keys.
+
+    For every requested FK field, the helper:
+      1. Verifies the column exists on the source model (skip if not).
+      2. Infers the target model via `_infer_fk_relation`.
+      3. Looks the target up in `_model_registry` (skip if missing).
+      4. Picks the first display column from `_DISPLAY_COL_CANDIDATES`
+         that the target table actually has.
+      5. Issues ONE batched `SELECT id, <display>` for the unique
+         non-NULL ids in `items` and stitches the labels back in.
+
+    Tenant isolation: the target table is filtered on `tenant_id`
+    too when both sides carry one. `apply_record_rules` is reused
+    from the RBAC layer so any rules on the target model still gate
+    the lookup.
+    """
+    from sqlalchemy import select
+
+    from orbiteus_core.security.rbac import apply_record_rules
+    from orbiteus_core.ui_config import _infer_fk_relation
+
+    src_entry = _model_registry.get(model_name)
+    if src_entry is None:
+        return
+    src_table = src_entry["table"]
+
+    for fk_field in expand_fields:
+        if fk_field not in src_table.c:
+            continue
+        target_model = _infer_fk_relation(fk_field, model_name)
+        if not target_model:
+            continue
+        target_entry = _model_registry.get(target_model)
+        if target_entry is None:
+            continue
+        target_table = target_entry["table"]
+
+        display_col_name: str | None = None
+        for cand in _DISPLAY_COL_CANDIDATES:
+            if cand in target_table.c:
+                display_col_name = cand
+                break
+        if display_col_name is None:
+            continue
+
+        ids: set[Any] = set()
+        for row in items:
+            v = row.get(fk_field)
+            if v is not None and v != "":
+                ids.add(str(v))
+        if not ids:
+            continue
+
+        stmt = select(target_table.c.id, target_table.c[display_col_name]).where(
+            target_table.c.id.in_(list(ids))
+        )
+        if (
+            "tenant_id" in target_table.c
+            and ctx.tenant_id is not None
+            and not ctx.is_superadmin
+        ):
+            stmt = stmt.where(target_table.c.tenant_id == ctx.tenant_id)
+        stmt = apply_record_rules(stmt, target_table, ctx, target_model)
+
+        try:
+            rows = (await session.execute(stmt)).all()
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "auto_router.expand_failed model=%s field=%s target=%s",
+                model_name, fk_field, target_model,
+            )
+            continue
+
+        labels = {str(rid): val for rid, val in rows}
+        out_key = f"{fk_field}__name"
+        for row in items:
+            v = row.get(fk_field)
+            if v is not None:
+                row[out_key] = labels.get(str(v))
+
+
 def register_model(
     model_name: str,
     domain_class: type,
@@ -142,14 +236,22 @@ def build_crud_router(model_name: str) -> APIRouter | None:
         limit: int = Query(25, ge=1, le=200),
         order_by: str | None = Query(None),
         order_dir: str = Query("asc", pattern="^(asc|desc)$"),
+        expand: str | None = Query(
+            None,
+            description="Comma-separated many2one fields to resolve. "
+                        "Each field gains a sibling `<field>__name` "
+                        "key in the response (e.g. expand=person_id "
+                        "adds person_id__name).",
+        ),
         session: AsyncSession = Depends(get_session),
         ctx: RequestContext = Depends(require_auth),
     ):
-        # Build domain from all remaining query params
+        # Build domain from all remaining query params (note: `expand`
+        # is reserved alongside the existing pagination/order knobs).
+        reserved = {"offset", "limit", "order_by", "order_dir", "expand"}
         raw_params = {k: v for k, v in request.query_params.items()
-                      if k not in {"offset", "limit", "order_by", "order_dir"}}
+                      if k not in reserved}
         domain, _ob, _od = _parse_query_domain(raw_params)
-        # Explicit Query params win for order
         effective_order_by = order_by or _ob
         effective_order_dir = order_dir or _od
 
@@ -164,8 +266,23 @@ def build_crud_router(model_name: str) -> APIRouter | None:
             )
         except AccessDenied as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
+
+        items_dicts = [
+            read_schema.model_validate(i, from_attributes=True).model_dump(mode="json")
+            for i in items
+        ]
+
+        if expand:
+            await _expand_many2one(
+                items_dicts,
+                expand_fields=[f.strip() for f in expand.split(",") if f.strip()],
+                model_name=model_name,
+                session=session,
+                ctx=ctx,
+            )
+
         return {
-            "items": [read_schema.model_validate(i, from_attributes=True) for i in items],
+            "items": items_dicts,
             "total": total,
             "offset": offset,
             "limit": limit,
