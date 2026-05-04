@@ -260,7 +260,25 @@ async def _chat_oneshot(
     session: AsyncSession,
     ctx: RequestContext,
 ) -> dict:
-    """Original non-streaming chat. Body is the same as `/chat`."""
+    """Original non-streaming chat. Body is the same as `/chat`.
+
+    On every accepted reply we:
+      1. Audit each `result.tool_calls` row with `actor=ai`.
+      2. Hand them to `dispatcher.dispatch_tool_call(...)` which
+         routes:
+           * action tools → the Python handler the module registered
+             via `orbiteus_core.ai.dispatcher.register_handler`,
+           * read tools / semantic_search → "skipped" (the AI is
+             expected to ground on the next turn — multi-turn
+             execution lands post-v1.0),
+           * unknown tool names → "error: no_handler".
+
+    Tool execution honours the caller's RBAC because the handler
+    receives the same `session` + `ctx` the request itself runs
+    under. There is no elevated AI context.
+    """
+    from orbiteus_core.ai.dispatcher import dispatch_tool_call
+
     p, cred, messages, tools, provider_name = await _resolve_chat_inputs(body, session, ctx)
     try:
         result = await p.chat(
@@ -281,9 +299,24 @@ async def _chat_oneshot(
         usage_tokens=result.usage_tokens,
     )
 
+    tool_results: list[dict[str, Any]] = []
+    for tool_call in result.tool_calls or []:
+        outcome = await dispatch_tool_call(
+            session,
+            ctx,
+            name=str(tool_call.get("name", "")),
+            arguments=tool_call.get("arguments") or {},
+        )
+        tool_results.append({
+            "tool_call_id": tool_call.get("id"),
+            "name": tool_call.get("name"),
+            **outcome,
+        })
+
     return {
         "text": result.text,
         "tool_calls": result.tool_calls,
+        "tool_results": tool_results,
         "usage_tokens": result.usage_tokens,
         "finish_reason": result.finish_reason,
     }

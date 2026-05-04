@@ -39,16 +39,24 @@ def _query_tool_for(model: str) -> dict[str, Any]:
 
 
 def _action_tool_for(action) -> dict[str, Any]:
+    """Build a provider-agnostic tool schema for one Action.
+
+    Honours the action's `parameters_schema` when present (canonical
+    way for an action to advertise the args its dispatcher handler
+    expects). Falls back to an open `id` field so legacy actions
+    keep a working — if minimal — tool surface.
+    """
+    schema = action.parameters_schema or {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Optional record id"},
+        },
+        "required": [],
+    }
     return {
         "name": action.id.replace(".", "_"),
         "description": action.description or action.label,
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string", "description": "Optional record id"},
-            },
-            "required": [],
-        },
+        "parameters": schema,
     }
 
 

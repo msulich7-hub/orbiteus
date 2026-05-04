@@ -52,12 +52,30 @@ ACTIONS = [
         id="crm.lead.move_stage",
         label="Move lead to stage",
         keywords=["change stage", "advance lead", "move pipeline"],
-        description="Update the stage of an existing lead",
+        description="Update the stage_id of an existing lead. Both id and "
+                    "stage_id are required UUIDs.",
         category=ActionCategory.EXECUTE,
         target="api",
         target_url="/api/crm/lead/{id}/move",
         requires_feature="crm.leads.manage",
         icon="arrow-right",
+        # Tool schema for AI function calling. The dispatcher handler
+        # in `modules/crm/ai.py` validates these and forwards to the
+        # repository — RBAC + tenant filter + audit row apply.
+        parameters_schema={
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "UUID of the crm.lead to move.",
+                },
+                "stage_id": {
+                    "type": "string",
+                    "description": "UUID of the target crm.stage.",
+                },
+            },
+            "required": ["id", "stage_id"],
+        },
     ),
     # --- Stages / Teams ---
     Action(

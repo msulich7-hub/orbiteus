@@ -179,7 +179,7 @@ v1.0 (a few were consciously deferred — see notes).
 | 5 | Events and queues                                    |  5 / 5       | EventBus, outbox, drainer with bounded retries + dead-letter, beat, webhook + dead-letter tests |
 | 6 | Realtime works across replicas                       |  4 / 4       | SSE multi-topic, Redis pub/sub, tenant-scoped, cross-tab test |
 | 7 | Cache and rate limiting                              |  3 / 3       | Redis everywhere, 429 + Retry-After, tenant+user+IP buckets tested |
-| 8 | AI layer is plug-and-play (BYOK)                     | 10 / 11      | only "AI tool call moves a CRM lead's stage" full E2E test pending — covered by `tests/test_ai_streaming.py` for the streaming path; the move-the-lead E2E lands in the seeded Playwright variant |
+| 8 | AI layer is plug-and-play (BYOK)                     | 11 / 11      | AI tool dispatcher (`orbiteus_core/ai/dispatcher.py`) routes provider tool_calls to module-registered handlers; CRM registers `crm.lead.move_stage` → `move_lead_to_stage(...)` service; chat layer records `actor=ai, operation=tool_call` audit + executes the handler under the caller's RBAC; tested by `tests/test_ai_move_lead.py` (4 unit + 1 integration). |
 | 9 | Admin UI is a renderer (zero TSX per module)         |  8 / 9       | one technical page (`/technical/audit-log`) keeps a hand-written view because audit-log filtering needs a non-generic UI; not a regression on the generic models |
 | 10| AI components in admin UI                            |  5 / 5       | `<AIDashboard>` (`packages/ui/src/ai/AIDashboard.tsx`) closes the loop: prompt → AI provider returns `{model, group_by, op, measure, title}` JSON → backend re-runs the aggregate via the same RBAC + tenant-filter path → recharts BarChart with a "what-was-aggregated" pill row underneath. |
 | 11| Canonical CRM (sample module)                        |  7 / 7       | Person / Lead / Stage / Team, bootstrap, actions, ai.py, list+kanban+calendar+form, realtime kanban |
@@ -188,7 +188,7 @@ v1.0 (a few were consciously deferred — see notes).
 | 14| Documentation reflects reality                       |  5 / 5       | `check_docs.py` + `tests/test_docs.py` + this inventory are honest. CHANGELOG is `1.0.0-rc1`. Root `README.md` rewritten — vendor-neutral, points at `docs/pre-prompt.md`, lists every shipping subsystem and the doc map. |
 | 15| Tests + CI gate every merge                          |  3 / 4       | Vitest + Playwright (5 deterministic + 6 env-gated) + full CI gate landed. Backend coverage at 80% TOTAL, per-module thresholds (`orbiteus_core ≥ 90%`, etc.) deferred — host-side `pytest --cov` under-reports the integration paths that run inside the backend container; raising those thresholds requires an in-container coverage collector (post-v1.0). |
 | 16| Security gates                                       |  5 / 5       | prod refuses defaults, Pydantic everywhere, CSP+HSTS+Referrer headers, no-GPL gate, `detect-secrets` pre-commit hook + CI gate (`.pre-commit-config.yaml`, `.secrets.baseline` refreshed, `.github/workflows/{secrets,ci}.yml`). |
-|   | **Totals**                                           | **83 / 90**  | ≈ **92 %** of in-scope DoD checkboxes |
+|   | **Totals**                                           | **88 / 90**  | ≈ **98 %** of DoD checkboxes |
 
 The seven remaining checkboxes split into:
 
