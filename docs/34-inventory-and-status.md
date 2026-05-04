@@ -62,7 +62,7 @@
 | **Migrate one-shot service** | DONE | `entrypoint-migrate.sh`, prod compose `migrate` service | — |
 | **Celery 5 + Beat** | DONE | `backend/celery_app.py`, `backend/tasks/{outbox,webhook}_tasks.py`, prod compose `worker` + `beat` services | drainer + HMAC webhook delivery shipping |
 | **Health endpoints** | DONE | `orbiteus_core/health.py` (`/api/health/{live,ready}`) | — |
-| **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` | series expanded in PR 13 |
+| **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` declares all 14 series families documented in `docs/29-observability.md`: HTTP (`requests_total`, `request_duration_seconds`), DB (`db_query_duration_seconds`, `db_pool_in_use`), Redis (`redis_commands_total`, `redis_latency_seconds`), Celery (`celery_task_duration_seconds`, `celery_tasks_total`, `celery_queue_depth`), Outbox (`outbox_pending`, `outbox_dead`), AI (`ai_calls_total`, `ai_tokens_total`, `ai_provider_latency_seconds`), Realtime (`sse_active_connections`, `pubsub_messages_total`). | DoD §13.2 met |
 | **JSON logging + request_id** | DONE | `orbiteus_core/observability/{logging,middleware}.py` | tenant_id/user_id ctx wired in PR 6 |
 | **Alembic advisory lock helper** | DONE | `orbiteus_core/alembic_lock.py` | applied in next migration |
 | **AI providers (Anthropic/OpenAI/Ollama)** | DONE | `orbiteus_core/ai/providers/{base,anthropic,openai,ollama}.py` (Provider ABC: `ping`/`chat`/`chat_stream`/`embed`; default `chat_stream` falls back to `chat()`; Anthropic native streaming via `messages.stream(...)`) | tested by `tests/test_ai_streaming.py` |
