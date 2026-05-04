@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { displayMany2oneCell, formatListDate, formatMoney } from "./formatters";
+import {
+  displayMany2oneCell,
+  formatListDate,
+  formatMoney,
+  humanizeRegistrySlugForUi,
+} from "./formatters";
+
+describe("humanizeRegistrySlugForUi", () => {
+  it("strips leading ir- / IR- before title-casing", () => {
+    expect(humanizeRegistrySlugForUi("ir-model")).toBe("Model");
+    expect(humanizeRegistrySlugForUi("IR-MODEL")).toBe("Model");
+    expect(humanizeRegistrySlugForUi("ir-model-access")).toBe("Model Access");
+  });
+
+  it("strips leading ir_ for snake_case fragments", () => {
+    expect(humanizeRegistrySlugForUi("ir_model")).toBe("Model");
+    expect(humanizeRegistrySlugForUi("ir_model_access")).toBe("Model Access");
+  });
+
+  it("does not change non-registry slugs", () => {
+    expect(humanizeRegistrySlugForUi("crm-lead")).toBe("Crm Lead");
+    expect(humanizeRegistrySlugForUi("partner")).toBe("Partner");
+  });
+});
 
 describe("formatListDate", () => {
   it("renders an em-dash for null / empty", () => {

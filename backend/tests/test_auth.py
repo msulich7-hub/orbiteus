@@ -64,6 +64,10 @@ async def test_me_returns_profile(client):
 
 @pytest.mark.asyncio
 async def test_me_requires_auth(client):
+    # The session-scoped client carries cookies from earlier login
+    # cases (HttpOnly cookie session, ADR-0017). Wipe them so this
+    # test sees a truly unauthenticated request.
+    client.cookies.clear()
     resp = await client.get("/api/auth/me")
     assert resp.status_code == 401
 

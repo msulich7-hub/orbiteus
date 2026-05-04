@@ -57,6 +57,7 @@ memory/
 # Coverage
 coverage.xml
 .coverage
+.coverage.host
 htmlcov/
 
 # Test artifacts

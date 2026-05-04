@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import re
 import types
 import uuid
 from enum import Enum
@@ -40,6 +41,13 @@ from typing import Any, get_args, get_origin
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+# Strip internal `ir-` / `ir_` registry prefix from UI labels (URLs stay `ir-model`).
+_IR_UI_PREFIX = re.compile(r"^ir[-_]", re.IGNORECASE)
+
+
+def _strip_ir_ui_prefix(name: str) -> str:
+    return _IR_UI_PREFIX.sub("", name, count=1)
 
 # ---------------------------------------------------------------------------
 # Pydantic annotation → UI type mapping
@@ -113,8 +121,8 @@ def _resolve_annotation(annotation: Any) -> str | None:
 
 
 def _field_label(name: str) -> str:
-    """Convert snake_case field name to Title Case label."""
-    return name.replace("_", " ").replace("-", " ").title()
+    """Convert snake_case field name to Title Case label (no leading ``Ir`` from ``ir_*``)."""
+    return _strip_ir_ui_prefix(name).replace("_", " ").replace("-", " ").title()
 
 
 def _unwrap_optional(annotation: Any) -> Any:
@@ -316,8 +324,8 @@ def build_ui_config() -> dict[str, Any]:
             def _view(vtype: str) -> str | None:
                 return get_resolved_arch_for_model(model_name, vtype, all_views)
 
-            # Model label = last segment of dotted name, Title Case
-            model_label = model_name.split(".")[-1].replace("_", " ").replace("-", " ").title()
+            # Model label = last segment of dotted name, Title Case (hide ``ir-`` prefix)
+            model_label = _field_label(model_name.split(".")[-1])
 
             models_out.append({
                 "name":   model_name,

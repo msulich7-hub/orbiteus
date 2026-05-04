@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { useBranding } from "@/lib/branding";
 import { api, type ModuleConfig } from "@/lib/api";
+import { humanizeRegistrySlugForUi } from "@/lib/formatters";
 import { getCachedUiConfig } from "@/lib/modelConfig";
 import CommandPalette from "@/components/CommandPalette";
 import PageBreadcrumbs from "@/components/PageBreadcrumbs";
@@ -47,7 +48,7 @@ function modelHref(moduleName: string, modelName: string): string {
 
 function modelLabel(modelName: string): string {
   const last = modelName.split(".").pop() ?? modelName;
-  return last.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return humanizeRegistrySlugForUi(last);
 }
 
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {

@@ -1,10 +1,11 @@
 /**
  * XML arch parser — converts backend view arch XML into frontend definitions.
  *
- * Intentionally dependency-free (regex-based) to keep Docker/runtime robust.
+ * Regex-based for robustness; shares display humanisation with `formatters`.
  */
 
 import type { FieldDef } from "@/components/ResourceForm";
+import { humanizeRegistrySlugForUi } from "./formatters";
 
 export interface ColumnDef {
   key: string;
@@ -132,11 +133,9 @@ function _parseOptions(
   return options.length > 0 ? options : undefined;
 }
 
-/** "some_field_name" → "Some Field Name" */
+/** "some_field_name" → "Some Field Name"; strips leading `ir-` / `ir_` like other UI labels */
 function _humanize(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return humanizeRegistrySlugForUi(name);
 }
 
 // ---------------------------------------------------------------------------

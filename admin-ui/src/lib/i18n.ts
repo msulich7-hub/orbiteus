@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { humanizeRegistrySlugForUi } from "./formatters";
 
 type Locale = "en" | "pl";
 
@@ -67,10 +68,7 @@ export function useI18n() {
 }
 
 export function humanizeFieldName(field: string): string {
-  return field
-    .replace(/_id$/, "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
+  const base = field.replace(/_id$/, "");
+  return humanizeRegistrySlugForUi(base);
 }
 

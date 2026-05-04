@@ -33,6 +33,14 @@ function toastDetail(err: { response?: { data?: { detail?: unknown } } }): strin
   return "Request failed";
 }
 
+/** Must stay aligned with `src/proxy.ts` — pages where 401 is expected (stale cookie + /auth/me). */
+function isPublicAuthSurface(pathname: string): boolean {
+  if (pathname === "/login" || pathname === "/welcome" || pathname === "/forgot-password") {
+    return true;
+  }
+  return pathname.startsWith("/reset/");
+}
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -40,9 +48,17 @@ api.interceptors.response.use(
     const skip = Boolean(err.config?.skipGlobalErrorToast);
 
     if (status === 401 && typeof window !== "undefined") {
-      // Cookie-based auth — let the Next middleware do the redirect on the
-      // next navigation; force an immediate hard reload so SSR re-runs.
-      window.location.href = "/login";
+      // A present-but-expired `orbiteus_token` still passes the Edge proxy
+      // (cookie existence only). `/auth/me` then returns 401; redirecting
+      // from `/login` would reload forever — only bounce off protected UI.
+      const path = window.location.pathname;
+      if (!isPublicAuthSurface(path)) {
+        const next = `${path}${window.location.search}`;
+        const loginUrl = next && next !== "/login"
+          ? `/login?next=${encodeURIComponent(next)}`
+          : "/login";
+        window.location.href = loginUrl;
+      }
       return Promise.reject(err);
     }
 

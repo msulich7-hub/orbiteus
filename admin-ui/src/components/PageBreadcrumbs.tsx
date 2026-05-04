@@ -3,12 +3,7 @@
 import { Breadcrumbs, Anchor } from "@mantine/core";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-function humanize(segment: string): string {
-  return segment
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import { humanizeRegistrySlugForUi } from "@/lib/formatters";
 
 /** Dashboard / Module / Model / … from URL path */
 export default function PageBreadcrumbs() {
@@ -26,7 +21,7 @@ export default function PageBreadcrumbs() {
     const seg = segments[i];
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg);
-    const label = isUuid ? "Record" : humanize(seg);
+    const label = isUuid ? "Record" : humanizeRegistrySlugForUi(seg);
     items.push({ label, href: acc });
   }
 

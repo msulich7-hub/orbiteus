@@ -3,6 +3,7 @@ import { use, useEffect, useState } from "react";
 import { getCachedUiConfig, findModel, modelToFormStructure, type FormPanels } from "@/lib/modelConfig";
 import ResourceForm, { type FieldDef } from "@/components/ResourceForm";
 import { Loader, Center } from "@mantine/core";
+import { humanizeRegistrySlugForUi } from "@/lib/formatters";
 
 interface Params { module: string; model: string; id: string; }
 
@@ -12,7 +13,7 @@ const FALLBACK: FieldDef[] = [{ key: "name", label: "Name", type: "text", requir
 export default function DynamicEditPage({ params }: { params: Promise<Params> }) {
   const { module: mod, model, id } = use(params);
   const resource = `${mod}/${model}`;
-  const title = model.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const title = humanizeRegistrySlugForUi(model);
   const [form, setForm] = useState<{ fields: FieldDef[]; panels?: FormPanels } | null>(null);
 
   useEffect(() => {

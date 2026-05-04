@@ -12,6 +12,7 @@ import ResourceCalendar from "@/components/ResourceCalendar";
 import ResourceGraph from "@/components/ResourceGraph";
 import ViewSwitcher, { useCurrentView, type ViewType } from "@/components/ViewSwitcher";
 import { api } from "@/lib/api";
+import { humanizeRegistrySlugForUi } from "@/lib/formatters";
 
 interface Params { module: string; model: string; }
 
@@ -58,7 +59,7 @@ function parseKanbanGroupField(arch: string): string {
 
 function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: ModelConfig }) {
   const resource = `${mod}/${model}`;
-  const title = model.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const title = humanizeRegistrySlugForUi(model);
 
   const available: ViewType[] = ["list"];
   if (cfg.views.kanban) available.push("kanban");
@@ -207,7 +208,7 @@ export default function DynamicListPage({ params }: { params: Promise<Params> })
 
 function FallbackList({ mod, model }: { mod: string; model: string }) {
   const resource = `${mod}/${model}`;
-  const title = model.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const title = humanizeRegistrySlugForUi(model);
   return (
     <Stack gap="md">
       <ViewHeader title={title} subtitle="Generic list view (no ui-config metadata)" />

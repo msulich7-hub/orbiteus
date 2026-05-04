@@ -32,6 +32,30 @@ from api import app  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
+# Autouse — flush rate-limit buckets between tests.
+#
+# Every test bootstraps a fresh tenant via `/api/auth/register`, which
+# is rate-limited by IP. Without this we run out of the 120/min quota
+# after ~5 tests. The Redis instance is shared with the dev compose
+# stack, so we delete only the `rl:*` keys (not `flushdb`).
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture(autouse=True)
+async def _flush_rate_limit_buckets():
+    try:
+        from orbiteus_core.cache import get_redis
+        client = get_redis()
+        keys = []
+        async for k in client.scan_iter("rl:*"):
+            keys.append(k)
+        if keys:
+            await client.delete(*keys)
+    except Exception:  # noqa: BLE001
+        pass
+    yield
+
+
+# ---------------------------------------------------------------------------
 # Session-scoped client — tables created once, app bootstraps once.
 # ---------------------------------------------------------------------------
 

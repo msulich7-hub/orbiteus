@@ -59,7 +59,7 @@ async def test_model_registry_has_crm_models(client):
     """Auto-router model registry should contain all CRM models."""
     from orbiteus_core.auto_router import _model_registry
 
-    expected_models = ["crm.customer", "crm.opportunity", "crm.pipeline", "crm.stage"]
+    expected_models = ["crm.person", "crm.lead", "crm.stage", "crm.team"]
     for model_name in expected_models:
         assert model_name in _model_registry, (
             f"Model '{model_name}' not found in _model_registry. "
@@ -87,6 +87,20 @@ async def test_ui_config_all_registered_models_have_fields(client):
             assert len(fields) >= 1, (
                 f"Model '{model['name']}' in module '{module['name']}' has no fields"
             )
+
+
+@pytest.mark.asyncio
+async def test_ui_config_ir_models_hide_registry_prefix_in_labels(client):
+    """Technical ``base.ir-*`` models must not surface ``Ir`` in human labels."""
+    resp = await client.get("/api/base/ui-config")
+    assert resp.status_code == 200
+    data = resp.json()
+    base = next((m for m in data["modules"] if m["name"] == "base"), None)
+    assert base is not None
+    labels_by_name = {mo["name"]: mo.get("label", "") for mo in base.get("models", [])}
+    assert labels_by_name.get("base.ir-model") == "Model"
+    assert labels_by_name.get("base.ir-model-access") == "Model Access"
+    assert "Ir " not in labels_by_name.get("base.ir-rule", "")
 
 
 # ---------------------------------------------------------------------------

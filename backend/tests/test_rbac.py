@@ -43,15 +43,19 @@ async def test_rbac_cache_loaded_at_startup(client):
 
 @pytest.mark.asyncio
 async def test_non_superadmin_gets_tenant_isolated_data(client):
-    """Two separate tenants: user A creates a customer, user B cannot see it."""
-    # Tenant A — register and create a customer
+    """Two separate tenants: user A creates a person, user B cannot see it.
+
+    Canonical CRM (ADR-0010, docs/26) uses `crm.person` as the
+    contact model — the previous `crm.customer` was retired.
+    """
+    # Tenant A — register and create a person
     email_a = unique_email("rbac_a")
     tokens_a = await register_user(client, email=email_a)
     token_a = tokens_a["access_token"]
 
     create_resp = await client.post(
-        "/api/crm/customer",
-        json={"name": "RBAC Tenant A Secret Customer"},
+        "/api/crm/person",
+        json={"name": "RBAC Tenant A Secret Person", "kind": "individual"},
         headers={"Authorization": f"Bearer {token_a}"},
     )
     assert create_resp.status_code in (200, 201), f"create failed: {create_resp.text}"
@@ -62,13 +66,13 @@ async def test_non_superadmin_gets_tenant_isolated_data(client):
     token_b = tokens_b["access_token"]
 
     list_resp = await client.get(
-        "/api/crm/customer",
+        "/api/crm/person",
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert list_resp.status_code == 200
     names = [c["name"] for c in _items(list_resp.json())]
-    assert "RBAC Tenant A Secret Customer" not in names, (
-        "Tenant isolation broken: Tenant B can see Tenant A's customer!"
+    assert "RBAC Tenant A Secret Person" not in names, (
+        "Tenant isolation broken: Tenant B can see Tenant A's person!"
     )
 
 
