@@ -3,9 +3,9 @@
     <img src="docs/assets/symbol-readme.svg" alt="Orbiteus" width="160" />
   </a>
 
-  **Orbiteus** — an AI-native engine for building business applications and internal AI agents.
+  **Orbiteus** — A Full-Stack Development Framework for AI Agents. Build custom ERP, CRM & business tools in days, not months. Start with ~80% of the heavy lifting already done.
 
-  ![status](https://img.shields.io/badge/version-v1.0.0--rc1-blue)
+  ![status](https://img.shields.io/badge/version-v1.0.0-blue)
   ![license](https://img.shields.io/badge/license-MIT-green)
   ![backend](https://img.shields.io/badge/backend-FastAPI%20%7C%20Python%203.13-3776AB)
   ![frontend](https://img.shields.io/badge/frontend-Next.js%2016%20%7C%20Mantine%209-000000)
@@ -27,6 +27,19 @@ primitives plus a small set of opinionated, batteries-included subsystems
 *canonical product example* (CRM-MVP) that demonstrates the platform. You
 install the engine, register modules, brand the UI, and get a business
 application shaped to your processes — not the other way around.
+
+**For product and engineering teams**, that foundation is the point: you skip
+months of stitching the same cross-cutting concerns together. Expect on the
+order of **three to four months less** boilerplate — tenants, auth, RBAC,
+audit, background work, realtime, AI guardrails — and spend your cycles on
+domain logic and UX instead of reinventing infrastructure.
+
+**For builders who move at AI speed** — solopreneurs, lean teams, internal
+“vibe coders” shipping tools for their own company — Orbiteus is a straight path
+from idea to **real** software: typed APIs, enforced isolation, observability,
+and UI patterns that still behave when the demo is over. You get business
+applications and internal tools that match how the org actually works, not a
+throwaway prototype.
 
 The contract:
 
@@ -94,7 +107,7 @@ traffic — the prod profile refuses to start otherwise.
 +--------------------+  +------------------+  +------------------+
 ```
 
-## What ships out of the box (v1.0.0-rc1)
+## What ships out of the box (v1.0.0)
 
 * **Boring infra** — `docker compose --profile prod up -d --build` brings up
   Postgres + pgvector + PgBouncer + Redis + backend (Gunicorn + UvicornWorker)
@@ -246,10 +259,9 @@ The full CI gate runs in `.github/workflows/ci.yml`. See
 
 ## Versioning + release
 
-This release is `v1.0.0-rc1` — see [`CHANGELOG.md`](CHANGELOG.md) for the
-release notes and [`docs/34-inventory-and-status.md`](docs/34-inventory-and-status.md)
-for the per-section DoD ledger. The `v1.0.0` GA tag waits for the items
-flagged `rc1 → GA` in the inventory.
+Current line is **`v1.0.0`**. See [`CHANGELOG.md`](CHANGELOG.md) for release
+notes and [`docs/34-inventory-and-status.md`](docs/34-inventory-and-status.md)
+for the running code-vs-docs ledger.
 
 ## License
 
