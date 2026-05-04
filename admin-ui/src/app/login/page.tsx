@@ -108,9 +108,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [fullWelcome, setFullWelcome] = useState(true);
-  const [welcomeChecked, setWelcomeChecked] = useState(true);
-  const [authStep, setAuthStep] = useState<AuthStep>("welcome");
+  // DoD §9.9 — `/login` is now sign-in only. The welcome page lives at
+  // `/welcome`. We keep `fullWelcome` as state so the legacy
+  // localStorage flag still works as an opt-in (developers who liked
+  // the embedded welcome can flip it back), but the default is FALSE
+  // so a clean visitor lands directly on the form.
+  const [fullWelcome, setFullWelcome] = useState(false);
+  const [welcomeChecked, setWelcomeChecked] = useState(false);
+  const [authStep, setAuthStep] = useState<AuthStep>("signin");
 
   const [health, setHealth] = useState<HealthJson | null>(null);
   const [healthErr, setHealthErr] = useState(false);
@@ -128,10 +133,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Legacy: if a developer pre-flipped `WELCOME_LS_KEY=true` we honour
+    // it, otherwise the default is "form only" (the welcome content
+    // lives at /welcome from now on).
     const v = localStorage.getItem(WELCOME_LS_KEY);
-    const show = v !== "false";
+    const show = v === "true";
     setFullWelcome(show);
     setWelcomeChecked(show);
+    if (show) setAuthStep("welcome");
   }, []);
 
   const saveWelcomePreference = useCallback((checked: boolean) => {
@@ -360,19 +369,7 @@ export default function LoginPage() {
         {signInStepLayout({ showBack: false })}
         <Container fluid px={fluidPx} pb="xl">
           <Text ta="center" size="sm">
-            <Anchor
-              component="button"
-              type="button"
-              c="dark"
-              fw={600}
-              style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-              onClick={() => {
-                localStorage.removeItem(WELCOME_LS_KEY);
-                setFullWelcome(true);
-                setWelcomeChecked(true);
-                setAuthStep("welcome");
-              }}
-            >
+            <Anchor href="/welcome" c="dark" fw={600}>
               Show full welcome page
             </Anchor>
           </Text>
