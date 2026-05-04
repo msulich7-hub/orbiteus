@@ -55,6 +55,36 @@ Files: [`docs/assets/readme-screenshots/`](docs/assets/readme-screenshots/) (`1.
 
 ---
 
+## Engine matrix
+
+What ships in the repo, in four layers. Icons are small line-art SVGs in [`docs/assets/engine-matrix/`](docs/assets/engine-matrix/).
+
+### Backend
+
+| ![PostgreSQL](docs/assets/engine-matrix/backend-postgres.svg) | ![FastAPI](docs/assets/engine-matrix/backend-fastapi.svg) | ![Redis & workers](docs/assets/engine-matrix/backend-redis-jobs.svg) |
+|:---:|:---:|:---:|
+| **PostgreSQL + pgvector**<br/>Tenant-scoped data, SQLAlchemy 2 + asyncpg, Alembic migrations, embeddings storage. | **FastAPI core**<br/>Auto-routed REST, OpenAPI, structured logs, Prometheus metrics, Gunicorn + Uvicorn in production. | **Redis + Celery**<br/>Cache, rate limits, JTI revocation, outbox, workers, Beat, signed webhooks, realtime Pub/Sub. |
+
+### Frontend (admin-ui)
+
+| ![Admin shell](docs/assets/engine-matrix/frontend-shell.svg) | ![Views](docs/assets/engine-matrix/frontend-views.svg) | ![Command palette](docs/assets/engine-matrix/frontend-command.svg) |
+|:---:|:---:|:---:|
+| **Next.js 16 + Mantine 9**<br/>Internal admin shell, auth session, design system (`orbiteus-ui`), production `next build`. | **Views + registry**<br/>List, form, kanban, calendar, graph from view XML — minimal bespoke TSX per business module. | **Command palette**<br/>`⌘K` actions wired to the engine; server-side `/api` proxy to the FastAPI backend. |
+
+### Portal UI
+
+| ![External users](docs/assets/engine-matrix/portal-external.svg) | ![Share links](docs/assets/engine-matrix/portal-share.svg) | ![API path](docs/assets/engine-matrix/portal-api.svg) |
+|:---:|:---:|:---:|
+| **Partner-facing app**<br/>Separate Next deployable; RBAC scope `portal` for external users. | **Share links**<br/>Token exchange and scoped access for customers or vendors (see [`docs/09-portal-ui.md`](docs/09-portal-ui.md)). | **Same-origin API**<br/>Next rewrites `/api/*` to `BACKEND_URL` — no CORS tricks in the browser for portal traffic. |
+
+### Built-in AI layer
+
+| ![BYOK](docs/assets/engine-matrix/ai-byok.svg) | ![Tools](docs/assets/engine-matrix/ai-tools.svg) | ![Streaming](docs/assets/engine-matrix/ai-stream.svg) |
+|:---:|:---:|:---:|
+| **BYOK providers**<br/>Anthropic, OpenAI, Ollama; encrypted tenant credentials; model + budget fields in admin. | **Tool dispatcher**<br/>Agents call registered tools that use `BaseRepository` — same RBAC and audit as human writes. | **Chat + embeddings**<br/>Streaming `/api/ai/chat`, dashboard prompts, pgvector-backed retrieval (see [`docs/15-ai-layer.md`](docs/15-ai-layer.md)). |
+
+---
+
 ## Capabilities (proof, not philosophy)
 
 | | |
