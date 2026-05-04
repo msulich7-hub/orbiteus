@@ -20,7 +20,9 @@
 
 ## What is Orbiteus?
 
-Orbiteus is **not a product** — it's a **platform for building products**.
+Orbiteus to framework dla agentów AI, na którym zbudują dla Ciebie dowolną aplikację biznesową. Zaczynasz od 80% zrobionej roboty. Skupiasz się tylko i wyłącznie na swoich potrzebach biznesowych, które opisujesz agentowi AI.
+
+Zbudujesz naprawdę solidną aplikację w kilka godzin albo maksymalnie dni. Po zbudowaniu aplikacji możesz powiedzieć AI, by uruchomił ją w naszej infrastrukturze albo na wskazanym przez Ciebie serwerze.
 
 ## HOW TO USE IT?
 
