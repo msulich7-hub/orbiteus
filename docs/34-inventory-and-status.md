@@ -1,10 +1,12 @@
 # 34 — Inventory & Status: Code vs Documentation
 
-> Honest snapshot of what exists in the codebase today versus what the new
+> Honest snapshot of what exists in the codebase today versus what the
 > documentation requires.
 >
-> Last reviewed: 2026-05-03 (after `feat/v1-final-100` — Definition of Done 100 %).
-> Engine ships as **v1.0** — see CHANGELOG.md.
+> Last reviewed: 2026-05-04
+>   — pre-release `v1.0.0-rc1`, framework Definition of Done at **~92 %** of
+>   the 80 checkboxes in `docs/35-core-definition-of-done.md`.
+>   See "DoD checklist progress" below for the per-section breakdown.
 > Owner: keep updated each release; refresh on every wave close.
 
 ## Legend
@@ -160,19 +162,52 @@
 | E2E | 5 deterministic Playwright scenarios + 6 env-gated for seeded tenants | runs in `npm run e2e --workspace admin-ui` |
 | CI gate (DoD §15.4) | DONE | `.github/workflows/ci.yml` (docs + backend pytest+cov + frontend vitest+build + Playwright deterministic subset + pip-audit + npm audit + pip-licenses + license-checker no-GPL gate; aggregated by a single `gate` job for branch protection) | release pipeline (E2E_FULL_SUITE=1) is a follow-up workflow |
 
-## Summary score against documentation
+## DoD checklist progress
 
-| Layer | Coverage of "to-be" docs |
-|---|---|
-| `orbiteus_core` framework | **100%** (hooks, audit, eventbus, outbox, cache, jti, rate-limit, realtime, AI, sharing) |
-| `modules/base` | **100%** (audit, outbox, webhooks, ai_credential, embedding tables shipped) |
-| `modules/auth` | **100%** (15min/jti, share-link issuance, password reset, 2FA) |
-| `modules/crm` | **100%** canonical (Person/Lead/Stage/Team + bootstrap + ai.py) |
-| Admin UI | **100%** renderer (catch-all only, packages/ui widgets + AI components) |
-| Portal UI | **100%** scaffold (share-link landing + exchange wired) |
-| Infrastructure | **100%** (dev + prod compose, PgBouncer, Redis, Gunicorn, migrate, Celery worker+beat, portal) |
-| Observability / rate limit / backups / GDPR | **100%** (logs + metrics + health + rate limit + pg_dump + restore drill + OTel auto-instrumentation when env set) |
+The framework Definition of Done in `docs/35-core-definition-of-done.md`
+defines 16 sections / ~80 checkboxes. Below is the honest tally as of the
+date in the header. Numerator = checkboxes verified DONE in code + tests;
+denominator = total checkboxes in the section that are still in scope for
+v1.0 (a few were consciously deferred — see notes).
+
+| § | Section                                              | Done / Total | Notes |
+|---|------------------------------------------------------|--------------|-------|
+| 1 | Boring infra runs with one command                   |  5 / 5       | dev + prod compose, healthchecks, migrate one-shot, SSE-aware nginx |
+| 2 | Multi-tenant boundary is provable                    |  4 / 4       | tenant_id, cross-tenant negative tests, Redis-backed RBAC |
+| 3 | Auth is production-grade                             |  6 / 6       | 15min/7d JWT + rotation, jti revocation, TOTP+recovery, password reset, prod guards, login rate limit |
+| 4 | Audit is mandatory and complete                      |  5 / 5*      | * "workflow transitions audited" deferred — workflow engine itself is post-v1.0 (ADR-0015) |
+| 5 | Events and queues                                    |  5 / 5       | EventBus, outbox, drainer with bounded retries + dead-letter, beat, webhook + dead-letter tests |
+| 6 | Realtime works across replicas                       |  4 / 4       | SSE multi-topic, Redis pub/sub, tenant-scoped, cross-tab test |
+| 7 | Cache and rate limiting                              |  3 / 3       | Redis everywhere, 429 + Retry-After, tenant+user+IP buckets tested |
+| 8 | AI layer is plug-and-play (BYOK)                     | 10 / 11      | only "AI tool call moves a CRM lead's stage" full E2E test pending — covered by `tests/test_ai_streaming.py` for the streaming path; the move-the-lead E2E lands in the seeded Playwright variant |
+| 9 | Admin UI is a renderer (zero TSX per module)         |  8 / 9       | one technical page (`/technical/audit-log`) keeps a hand-written view because audit-log filtering needs a non-generic UI; not a regression on the generic models |
+| 10| AI components in admin UI                            |  4 / 5       | `<AIDashboard>` is the open box — backend chart spec endpoint exists but the React component renders a placeholder until the dashboard wave |
+| 11| Canonical CRM (sample module)                        |  7 / 7       | Person / Lead / Stage / Team, bootstrap, actions, ai.py, list+kanban+calendar+form, realtime kanban |
+| 12| Portal UI (external partner)                         |  7 / 7       | scaffold, share, exchange, `<portal>` declaration, mutations gated, realtime, negative tests |
+| 13| Observability + ops                                  |  5 / 5       | JSON logs, expanded `/metrics` (14 series families), OTel opt-in, S3-capable backups, restore drill executed |
+| 14| Documentation reflects reality                       |  3 / 5       | `check_docs.py` + `tests/test_docs.py` + this inventory are honest. CHANGELOG is `1.0.0-rc1` (task 5.2). README.md root refresh deferred to the v1.0 release commit (task 5.3) |
+| 15| Tests + CI gate every merge                          |  3 / 4       | Vitest + Playwright (5 deterministic + 6 env-gated) + full CI gate landed. Backend coverage at 80% TOTAL, per-module thresholds (`orbiteus_core ≥ 90%`, etc.) deferred — host-side `pytest --cov` under-reports the integration paths that run inside the backend container; raising those thresholds requires an in-container coverage collector (post-v1.0). |
+| 16| Security gates                                       |  4 / 5       | prod refuses defaults, Pydantic everywhere, CSP+HSTS+Referrer headers, no-GPL gate landed. `detect-secrets` pre-commit hook is the open item. |
+|   | **Totals**                                           | **83 / 90**  | ≈ **92 %** of in-scope DoD checkboxes |
+
+The seven remaining checkboxes split into:
+
+  * **3 deliberate post-v1.0 punts** — workflow engine, AI move-the-lead
+    E2E (Playwright seeded variant), backend per-module coverage
+    thresholds. Documented as "Consciously Deferred Framework
+    Primitives" in `docs/pre-prompt.md`.
+  * **2 follow-up commits within this release branch** — `CHANGELOG.md`
+    bumped from `1.0.0` to `1.0.0-rc1` (task 5.2) and the root `README.md`
+    refresh (task 5.3).
+  * **1 paper cut** — `<AIDashboard>` placeholder.
+  * **1 hardening pass** — `detect-secrets` pre-commit hook.
+
+That leaves the engine **publishable as `v1.0.0-rc1`** today; the
+`v1.0.0` GA tag waits for the four follow-ups above.
 
 ## What "core 100% closed" means
 
-See `35-core-definition-of-done.md`.
+See `35-core-definition-of-done.md` — every checkbox there has to be
+true at release time. The table above is the running ledger of that
+work; this file is the canonical place to update on every PR that
+closes a checkbox.
