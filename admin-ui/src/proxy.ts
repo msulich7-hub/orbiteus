@@ -11,12 +11,17 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = new Set<string>(["/login", "/welcome"]);
+const PUBLIC_PATHS = new Set<string>(["/login", "/welcome", "/forgot-password"]);
+// Reset URLs carry the JWT in the path: /reset/<token>. Match by prefix.
+const PUBLIC_PREFIXES = ["/reset/"] as const;
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (PUBLIC_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
+  if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 

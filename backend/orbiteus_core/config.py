@@ -25,6 +25,28 @@ class Settings(BaseSettings):
     rate_limit_ip_per_minute: int = 120
     rate_limit_anonymous_per_minute: int = 30
 
+    # Password reset flow (DoD §3.4).
+    password_reset_ttl_minutes: int = 30
+    # Per-email throttle on `POST /api/auth/password/request` to prevent
+    # mailbox flood. The endpoint always returns 200, so this is the
+    # only line of defence.
+    password_reset_request_window_seconds: int = 60
+    # Public URL the password-reset email points users at. The frontend
+    # serves the token-input page at `${frontend_base_url}/reset/<jwt>`.
+    frontend_base_url: str = "http://localhost:3000"
+
+    # SMTP / mailer (DoD §3.4 + §11.7 transactional mail).
+    # When `smtp_host` is empty (default for dev) the mailer logs the
+    # message to stdout instead of opening a TCP connection. This keeps
+    # local + CI environments free of an external dependency while
+    # still exercising the full code path.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    smtp_from_address: str = "no-reply@orbiteus.local"
+
     # AI provider key encryption (Fernet) — used in PR 8.
     ai_secret_key: str = "change-me-with-fernet-key"
 

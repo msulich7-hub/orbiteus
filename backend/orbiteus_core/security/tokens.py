@@ -59,3 +59,38 @@ def decode_refresh_token(token: str) -> dict[str, Any]:
         return payload
     except JWTError as e:
         raise ValueError(f"Invalid refresh token: {e}") from e
+
+
+# ---------------------------------------------------------------------------
+# Password reset tokens (single-use, short-lived)
+# ---------------------------------------------------------------------------
+#
+# Single-use is enforced by the regular `jti` revocation list in Redis: the
+# moment a reset token is consumed by `POST /api/auth/password/reset`, its
+# `jti` is added to `jti:revoked:*` for the remaining TTL. A second attempt
+# with the same token therefore returns 401 "Token revoked".
+#
+# Default TTL is 30 minutes (configurable via `password_reset_ttl_minutes`)
+# — long enough for a user to read the email, short enough to bound the
+# blast radius of a stolen mailbox.
+
+def create_password_reset_token(user_id: uuid.UUID, *, ttl_minutes: int | None = None) -> str:
+    payload = {
+        "sub": str(user_id),
+        "type": "password_reset",
+        "jti": _new_jti(),
+        "exp": datetime.now(timezone.utc) + timedelta(
+            minutes=ttl_minutes or getattr(settings, "password_reset_ttl_minutes", 30),
+        ),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def decode_password_reset_token(token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "password_reset":
+            raise JWTError("Not a password-reset token")
+        return payload
+    except JWTError as e:
+        raise ValueError(f"Invalid password-reset token: {e}") from e

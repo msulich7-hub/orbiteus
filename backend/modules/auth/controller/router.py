@@ -23,7 +23,9 @@ from orbiteus_core.security.middleware import require_auth
 from orbiteus_core.security.passwords import hash_password, verify_password
 from orbiteus_core.security.tokens import (
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
+    decode_password_reset_token,
     decode_refresh_token,
 )
 
@@ -121,6 +123,15 @@ class RecoveryCodesResponse(BaseModel):
         "Store these one-time codes somewhere safe. They are shown ONCE; "
         "regenerate any time via POST /api/auth/2fa/recovery-codes."
     )
+
+
+class PasswordResetRequestPayload(BaseModel):
+    email: str
+
+
+class PasswordResetConfirmPayload(BaseModel):
+    token: str
+    new_password: str
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +432,196 @@ async def verify_totp(
 
     await repo.update(ctx.user_id, {"totp_enabled": True})
     return {"message": "2FA enabled successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Password reset (DoD §3.4)
+# ---------------------------------------------------------------------------
+#
+# Two endpoints, both rate-limited and intentionally non-revealing:
+#
+#   POST /api/auth/password/request   { email }
+#       Always returns 200 (prevents user enumeration). When the email
+#       matches an existing user we mint a `password_reset` JWT (TTL =
+#       `settings.password_reset_ttl_minutes`) and call
+#       `mail.send_mail(...)` with the reset URL. Per-email throttle
+#       (`settings.password_reset_request_window_seconds`) prevents
+#       mailbox flood.
+#
+#   POST /api/auth/password/reset     { token, new_password }
+#       Validates the JWT, refuses tokens already consumed (single-use:
+#       the `jti` is moved to the Redis revocation list as soon as the
+#       password is rotated), then writes the new bcrypt hash and
+#       returns 204.
+#
+# Login events / failed attempts are NOT audited here — that's task 1.3.
+
+@router.post("/password/request", status_code=status.HTTP_200_OK)
+async def password_reset_request(
+    payload: PasswordResetRequestPayload,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Always-200 password-reset request — see module docstring.
+
+    The 200 status is the same whether or not the email exists; the
+    only side-effect a caller can observe is whether the email lands in
+    their inbox. This is the canonical defence against user enumeration.
+    """
+    _enforce_rate_limit(request, "password_request_ip", limit=20, window_seconds=60)
+
+    email = (payload.email or "").strip().lower()
+    if not email:
+        return {"status": "ok"}
+
+    # Per-email throttle — one mail per `password_reset_request_window_seconds`.
+    try:
+        from orbiteus_core.cache import get_redis
+
+        client = get_redis()
+        gate_key = f"pwreset:throttle:{email}"
+        was_set = await client.set(
+            gate_key,
+            "1",
+            ex=settings.password_reset_request_window_seconds,
+            nx=True,
+        )
+        if not was_set:
+            # We've already accepted a request for this address very
+            # recently; pretend nothing happened (still 200, no extra
+            # mail).
+            return {"status": "ok"}
+    except Exception:  # noqa: BLE001
+        # Redis outage MUST NOT brick password reset. Continue without
+        # the throttle — the IP-level limit above is the fallback.
+        pass
+
+    from modules.base.controller.repositories import UserRepository
+    from orbiteus_core.mail import send_mail
+
+    superctx = RequestContext(is_superadmin=True)
+    repo = UserRepository(session, superctx)
+    user = await repo.get_by_email(email)
+
+    if user is None or not user.is_active:
+        # Same-shape response prevents enumeration via response timing /
+        # status. We still log so an operator can spot probing.
+        import logging
+        logging.getLogger(__name__).info(
+            "auth.password_reset.request_unknown_email email=%s", email,
+        )
+        return {"status": "ok"}
+
+    token = create_password_reset_token(user.id)
+    reset_url = f"{settings.frontend_base_url.rstrip('/')}/reset/{token}"
+    body_text = (
+        f"Hi {user.name or user.email},\n\n"
+        f"Use the link below to reset your Orbiteus password. "
+        f"It expires in {settings.password_reset_ttl_minutes} minutes "
+        f"and can be used only once.\n\n"
+        f"{reset_url}\n\n"
+        f"If you did not request this, please ignore this email."
+    )
+    await send_mail(
+        to=user.email,
+        subject="Reset your Orbiteus password",
+        body_text=body_text,
+    )
+    return {"status": "ok"}
+
+
+@router.post("/password/reset", status_code=status.HTTP_200_OK)
+async def password_reset_confirm(
+    payload: PasswordResetConfirmPayload,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Consume a `password_reset` JWT and rotate the user's password."""
+    _enforce_rate_limit(request, "password_reset_ip", limit=30, window_seconds=60)
+
+    if not payload.new_password or len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters",
+        )
+
+    try:
+        data = decode_password_reset_token(payload.token)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired reset token",
+        )
+
+    jti = data.get("jti")
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing jti",
+        )
+
+    # Single-use guard: refuse if already consumed.
+    try:
+        from orbiteus_core.security.jti import is_revoked
+
+        if await is_revoked(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token already used",
+            )
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001
+        # Open-fail mirrors RBAC: if Redis is dead, we still let the
+        # user reset their password. The token itself has a 30-minute
+        # TTL so the blast radius is bounded.
+        pass
+
+    user_id_str = data.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing subject",
+        )
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has malformed subject",
+        )
+
+    from modules.base.controller.repositories import UserRepository
+
+    superctx = RequestContext(is_superadmin=True)
+    repo = UserRepository(session, superctx)
+    try:
+        user = await repo.get(user_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account disabled",
+        )
+
+    new_hash = hash_password(payload.new_password)
+    await repo.update(user.id, {"password_hash": new_hash})
+    await session.commit()
+
+    # Move the consumed token's `jti` to the revocation list so a second
+    # attempt with the same link yields 401 "Token already used".
+    try:
+        from orbiteus_core.security.jti import revoke as _revoke_jti
+
+        await _revoke_jti(jti, data.get("exp", 0))
+    except Exception:  # noqa: BLE001
+        pass
+
+    return {"status": "ok"}
 
 
 @router.post("/2fa/recovery-codes", response_model=RecoveryCodesResponse)

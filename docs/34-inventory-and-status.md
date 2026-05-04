@@ -29,6 +29,7 @@
 | **AI Integration admin page (BYOK)** | DONE | `admin-ui/src/app/technical/ai-integration/page.tsx` (list/save/delete + test query) | wired to `GET/POST/DELETE /api/ai/credentials` and `POST /api/ai/chat` |
 | **Cmd+K auto-CRUD action registration** | DONE | `backend/api.py:_seed_auto_actions`; CommandPalette reads `data.items` | every model in `_model_registry` gets `<model>.list` + `<model>.create` automatically; module-curated `actions.py` wins on id collisions |
 | TOTP 2FA + recovery codes | DONE | `security/tokens.py`, `security/recovery_codes.py`, `POST /api/auth/2fa/recovery-codes` | bcrypt-hashed, single-use codes |
+| Password reset flow | DONE | `POST /api/auth/password/{request,reset}` (always-200 + per-email throttle + single-use jti revocation) + `orbiteus_core/mail.py` mailer + `admin-ui/src/app/{forgot-password,reset/[token]}/page.tsx` | `tests/test_password_reset.py` (3 unit + 4 e2e) |
 | AI Action Registry + RapidFuzz | DONE | `ai/{action,registry,resolver,router}.py` | — |
 | **Audit log (`ir_audit_log`)** | DONE | `modules/base/model/{domain,mapping}.py`, migration `a1f3c0e1b002` | mandatory; opt-out via `AUDIT_OPTOUT_MODELS` |
 | **EventBus (in-process)** | DONE | `orbiteus_core/events.py` | sync error isolation, decorator subscribe |
@@ -39,7 +40,7 @@
 | **FK resolution `{field}__name`** | MISSING | — | needed for CRM-MVP |
 | **Sequences `next_val()`** | STUB | `IrSequence` row only | core wave 2 |
 | **Attachments upload/download** | STUB | `IrAttachment` row only | core wave 3 |
-| **Mail/SMTP send** | STUB | `IrMailTemplate` row only | core wave 3 |
+| **Mail/SMTP send** | PARTIAL | `orbiteus_core/mail.py` (dev-log fallback when `smtp_host=""`, `aiosmtplib` SMTP+STARTTLS in prod); used by `/api/auth/password/{request,reset}`. `IrMailTemplate` table still untouched. | template-driven send is wave 3 |
 | **Activities/chatter** | MISSING | — | core wave 3 |
 | **Workflow engine (generic)** | MISSING | — (Temporal explicitly excluded by ADR-0015; reach for it only when sagas materialise) | core wave 3 |
 | **Computed fields** | MISSING | — | core wave 3 |

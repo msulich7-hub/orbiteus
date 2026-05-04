@@ -313,6 +313,11 @@ export default function LoginPage() {
               autoFocus
             />
             <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <Group justify="flex-end">
+              <Anchor size="sm" c="dark" href="/forgot-password">
+                Forgot password?
+              </Anchor>
+            </Group>
             <Button type="submit" loading={loading} fullWidth mt="xs" size="md" color="dark">
               Sign in
             </Button>
