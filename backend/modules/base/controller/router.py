@@ -49,6 +49,137 @@ async def health() -> dict:
     return {"status": "ok", "service": "orbiteus-backend"}
 
 
+# ---------------------------------------------------------------------------
+# Aggregate primitive (DoD §9.6) — backs Graph view + AI dashboard.
+# ---------------------------------------------------------------------------
+
+# Operators we accept on the `op` query param. Restricted to a closed
+# allow-list because anything more general would let a caller call
+# arbitrary SQLAlchemy functions through the endpoint.
+_AGG_OPS: dict[str, str] = {
+    "count": "count",
+    "sum":   "sum",
+    "avg":   "avg",
+    "min":   "min",
+    "max":   "max",
+}
+
+
+@router.get("/aggregate")
+async def aggregate(
+    model: str = Query(..., description="Dotted model name, e.g. 'crm.lead'"),
+    group_by: str = Query(..., description="Field to group rows by"),
+    op: str = Query("count", description="Aggregate operator: count|sum|avg|min|max"),
+    measure: str | None = Query(
+        None,
+        description="Numeric field to aggregate. Required for sum/avg/min/max; ignored for count.",
+    ),
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> dict:
+    """Return ``[{group, value}, …]`` rows for the requested model.
+
+    Tenant isolation is automatic: we route through the model's
+    registered ``BaseRepository`` so the same RBAC + record-rule
+    filters that protect ``/api/<module>/<model>`` apply here. Without
+    that, this endpoint would be a sideways way to leak rows that the
+    caller isn't allowed to read.
+
+    Example::
+
+        GET /api/base/aggregate?model=crm.lead
+            &group_by=stage_id&op=sum&measure=expected_revenue
+        → {"data": [
+              {"group": "<uuid-stage-1>", "value": 150000.0},
+              {"group": "<uuid-stage-2>", "value":  72000.0}
+           ],
+           "model": "crm.lead", "group_by": "stage_id",
+           "op": "sum", "measure": "expected_revenue"}
+
+    Errors:
+      * 400 — unknown op / missing measure for non-count op /
+              unknown group_by or measure field
+      * 403 — caller lacks `read` on the model
+      * 404 — model not registered
+    """
+    if op not in _AGG_OPS:
+        raise HTTPException(status_code=400, detail=f"Unknown op {op!r}; must be one of {sorted(_AGG_OPS)}")
+
+    if op != "count" and not measure:
+        raise HTTPException(status_code=400, detail="op=%s requires a 'measure' query param" % op)
+
+    from sqlalchemy import func, select
+
+    from orbiteus_core.auto_router import _model_registry
+    from orbiteus_core.security.rbac import (
+        apply_record_rules,
+        check_model_access,
+    )
+
+    entry = _model_registry.get(model)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"Model {model!r} not registered")
+
+    if not await check_model_access(ctx, model, "read"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    table = entry["table"]
+    group_col = table.c.get(group_by)
+    if group_col is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown group_by field {group_by!r} on {model!r}",
+        )
+
+    if op == "count":
+        agg = func.count(table.c.id)
+    else:
+        measure_col = table.c.get(measure)
+        if measure_col is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown measure field {measure!r} on {model!r}",
+            )
+        # `func.sum`/`func.avg`/etc. resolve via getattr — already
+        # validated above through `_AGG_OPS`.
+        agg = getattr(func, _AGG_OPS[op])(measure_col)
+
+    stmt = select(group_col, agg).group_by(group_col)
+
+    # Tenant filter — every business table carries `tenant_id`. The
+    # `ir_*` tables that don't have a tenant_id (configured at the
+    # instance level) are still searchable by superadmin only.
+    if "tenant_id" in table.c and ctx.tenant_id is not None and not ctx.is_superadmin:
+        stmt = stmt.where(table.c.tenant_id == ctx.tenant_id)
+
+    # Record rules (Level 2 RBAC) — same logic the repository uses.
+    stmt = apply_record_rules(stmt, table, ctx, model)
+
+    rows = (await session.execute(stmt)).all()
+
+    def _coerce_value(v):
+        # Decimal → float so the JSON encoder is happy and recharts
+        # eats it without an explicit cast.
+        if v is None:
+            return None
+        if hasattr(v, "as_tuple"):  # Decimal duck-typing
+            return float(v)
+        return v
+
+    data = [
+        {"group": _coerce_value(g), "value": _coerce_value(v)}
+        for g, v in rows
+    ]
+
+    return {
+        "model": model,
+        "group_by": group_by,
+        "op": op,
+        "measure": measure,
+        "data": data,
+    }
+
+
 @router.get("/audit-log")
 async def list_audit_log(
     model: str | None = Query(default=None),

@@ -45,7 +45,7 @@
 | **Workflow engine (generic)** | MISSING | — (Temporal explicitly excluded by ADR-0015; reach for it only when sagas materialise) | core wave 3 |
 | **Computed fields** | MISSING | — | core wave 3 |
 | **Onchange engine** | MISSING | — | core wave 3 |
-| **Aggregate endpoint** | MISSING | — | needed for AI dashboard |
+| **Aggregate endpoint** | DONE | `GET /api/base/aggregate` (model + group_by + op ∈ {count,sum,avg,min,max} + measure; tenant-scoped via repository's RBAC + record-rule filters) | tested by `tests/test_aggregate_endpoint.py` (8 cases: count/sum, Decimal→float coercion, op/measure/model/field validation, tenant isolation) — backs Graph view + AI dashboard |
 | **CSV import/export** | MISSING | — | core wave 3 |
 | **Server actions / cron exec** | DONE | `IrCron` rows + Celery Beat schedule (ADR-0015 supersedes prior Temporal stub) | runtime smoke test in next pass |
 | **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
