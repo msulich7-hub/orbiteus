@@ -111,8 +111,34 @@ async def exchange(
         # without an extra round-trip. The id is already inside the
         # signed token; we are not leaking anything.
         "tenant_id": str(payload.tenant_id),
+        # Portal "view declaration" (DoD §12.5): the resource itself
+        # is ALWAYS read-only from the portal — mutations live behind
+        # the dedicated `/comment` + `/attachment` endpoints and are
+        # gated by their own permission strings on the share token.
+        # If a future module wants to expose a writable field via the
+        # portal, that field has to land in an explicit "portal" view
+        # declaration; the default is locked down.
+        "view_mode": "readonly",
+        # Frontend uses this to know which mutation surfaces to render.
+        "available_mutations": _mutations_for_permissions(payload.permissions),
         "payload": safe_payload,
     }
+
+
+def _mutations_for_permissions(perms: list[str]) -> list[str]:
+    """Map share-token permissions to the mutation endpoints they unlock.
+
+    The frontend reads this list to know whether to render the
+    "Add comment" / "Upload attachment" surfaces. Anything not on
+    this list MUST stay hidden — the backend re-checks the same
+    permission strings before accepting the mutation, so this is a
+    UX hint, not a security boundary.
+    """
+    mapping = {
+        "comment":     "portal.comment",
+        "attach_file": "portal.attachment",
+    }
+    return [mapping[p] for p in perms if p in mapping]
 
 
 # ---------------------------------------------------------------------------

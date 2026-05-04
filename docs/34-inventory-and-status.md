@@ -124,7 +124,7 @@
 | Backend `GET /api/portal/realtime` | DONE | `orbiteus_core/portal_router.py` (share-token-authenticated SSE; refuses topics outside the granted resource); reuses `stream_topics(...)` so admin-ui and portal-ui share the same Redis backplane |
 | Portal realtime client | DONE | `portal-ui/src/lib/realtime.ts` (`useRealtimeShareResource(shareToken, tenantId, model, recordId, onChange)`; exp. backoff reconnect 3s → 30s) |
 | Compose service `portal` | DONE | `docker-compose.prod.yml` |
-| Comments + limited actions surface | NEXT PASS | basic exchange + read works; mutations TBD |
+| Comments + limited actions surface | DONE | `portal-ui/src/app/s/[token]/page.tsx` renders `CommentSurface` + `AttachmentSurface` only when the share-token grants `comment` / `attach_file`. Backend exchange returns `view_mode: "readonly"` (DoD §12.5 default) and `available_mutations: [...]` mapping perms to portal endpoints. Mutations themselves (`POST /api/portal/comment`, `POST /api/portal/attachment`) re-validate the same perms server-side. |
 
 ## Infrastructure
 
