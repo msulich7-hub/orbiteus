@@ -3,10 +3,8 @@
     <img src="docs/assets/symbol-readme.svg" alt="Orbiteus" width="160" />
   </a>
 
-  <!-- LOCKED: README hero (pitch) — do not edit without explicit product-owner approval (see AGENTS.md). -->
-  **Orbiteus — Own the software. Ship the vertical. Stop renting your workflow.**
-
-  *An AI-native engine that turns months of integration into **weeks of differentiation** — for teams who need **production-grade** business apps without chaining themselves to someone else’s roadmap.*
+  <!-- LOCKED: README hero tagline — do not edit without explicit product-owner approval (see AGENTS.md). -->
+  **Orbiteus — A Full-Stack Development Framework for AI Agents. Build custom ERP, CRM & Business Tools in days not months. Start with 80% of the job done.**
 
   ![status](https://img.shields.io/badge/version-v1.0.0-blue)
   ![license](https://img.shields.io/badge/license-MIT-green)
@@ -16,40 +14,60 @@
   ![db](https://img.shields.io/badge/db-PostgreSQL%2016%20%2B%20pgvector-336791)
 </div>
 
----
-
-## The problem
-
-**Vertical businesses run on software that was never meant to exist as a SKU.** Off-the-shelf SaaS fits the median company — not the gym chain, the studio, the logistics operator, or the niche B2B market you actually serve. So teams either bend their process around generic tools, or they burn quarters wiring auth, tenants, permissions, audit, APIs, admin UI, jobs, and AI — before they write a single line of *their* competitive logic.
-
-That is the tax: **integration debt disguised as “we’re building product.”**
+> **AI agents** touching this repository: read [`docs/pre-prompt.md`](docs/pre-prompt.md) first. It is the canonical stack and convention contract. Skipping it leads to invented dependencies and bypassed framework primitives — both out of bounds.
 
 ---
 
-## What Orbiteus is
+## What is Orbiteus?
 
-Orbiteus is **not a finished app you subscribe to** — it is an **application engine**: multi-tenant identity, security, data layer, admin and partner surfaces, events, realtime, observability, and an **AI layer that respects the same rules as people**. You install the engine, register modules, and ship **your** product — with **your** margins, **your** data model, and **your** roadmap.
+Orbiteus is **not a product** — it's a **platform for building products**.
 
-Think of it as **infrastructure for software businesses** — a challenger to “rent every workflow forever” SaaS.
+You install the engine, configure modules, brand the UI, and get **your own** business application — shaped around **your** processes, not the other way around.
+
+## What you can build with Orbiteus
+
+- **Gym chain management** (members, contracts, trainers)
+- **Interior design studio** (projects, suppliers, subcontractors)
+- **Transport management system (TMS)**
+- **Niche CRM SaaS** for any vertical
+- **Warehouse management (WMS)**
+- **Any combination of the above**
+
+The hero line is literal: **80% of the plumbing is already there** — auth, tenants, permissions, audit, APIs, admin UI, jobs, realtime, and **AI agents** calling tools under the same rules as people. You sell the **20%** that is your market: members, loads, studio phases, stock moves — not another hand-rolled session stack or webhook retry loop.
 
 ---
 
-## Who it is for
+## Screenshots
 
-| Audience | What changes for them |
-|----------|----------------------|
-| **Founders & product-led teams** | You sell the **20%** that is your market — not another hand-rolled auth story or webhook retry loop. |
-| **Engineering orgs under time pressure** | Serious teams **compress delivery** because the platform already carries tenancy, RBAC, audit, APIs, admin patterns, queues, and realtime. |
-| **Builders using AI-assisted development** | When the guardrails are in the engine, **velocity does not trade away production quality** — security and compliance hooks are defaults, not afterthoughts. |
-| **Anyone tired of SaaS lock-in** | **You own the deployment, the brand, and the economics** — not a vendor’s feature calendar. |
+Files: [`docs/assets/readme-screenshots/`](docs/assets/readme-screenshots/) (`1.png`–`5.png`). Swap files there to refresh the gallery.
+
+| ![Admin dashboard and AI assistant](docs/assets/readme-screenshots/1.png) | ![Command palette — quick create](docs/assets/readme-screenshots/2.png) |
+|:---:|:---:|
+| **1.** Admin dashboard — CRM KPIs, AI assistant, CRM + Technical nav. | **2.** Command palette (`⌘K`) — create records across modules from one search. |
+
+| ![New webhook form](docs/assets/readme-screenshots/3.png) | ![Audit log](docs/assets/readme-screenshots/4.png) |
+|:---:|:---:|
+| **3.** Webhooks — outbound events, target URL, optional auth headers. | **4.** Audit log — tenant-wide trail with filters and field-level diffs. |
+
+| ![AI integration BYOK](docs/assets/readme-screenshots/5.png) |
+|:---:|
+| **5.** AI integration — BYOK provider keys, models, per-tenant token budget. |
 
 ---
 
-## How Orbiteus solves it
+## Capabilities (proof, not philosophy)
 
-1. **Ship the differentiated core first** — Auth, multi-tenancy, layered permissions, audit, auto-APIs, dynamic admin UI patterns, background work, webhooks, and AI tools are **already in the box**; you focus on domain models and customer value.
-2. **AI that ships safely** — Agents call tools through the same repository and policy layer as human users — **no shadow IT inside your own product.**
-3. **One command to a working stack** — Local development spins Postgres (with pgvector), Redis, API, admin UI, and portal UI together so **demo day and diligence both see a real system**, not a slide.
+| | |
+|---|---|
+| **Modular monolith** | `registry.register("your_module")` wires models, security, views, actions, and optional AI surface in one place. |
+| **Zero TSX per business module** | Catch-all admin routes + widget registry + view XML — new tables and APIs ship with matching UI patterns. |
+| **Multi-tenant by default** | Repository-enforced tenancy; negative tests for cross-tenant access. |
+| **Layered RBAC** | Model access, record rules, actions, and AI scopes; Redis-backed cache with cross-replica invalidation. |
+| **Audit** | CRUD, auth events, AI tool calls — with redaction hooks for sensitive payloads. |
+| **Events, outbox, webhooks** | Atomic outbox rows, Celery workers, bounded retries, dead-letter path, HMAC-signed delivery. |
+| **Realtime** | SSE + Redis Pub/Sub; tenant-scoped topics; admin lists and portal views can subscribe safely. |
+| **Infra in one command** | Docker Compose: Postgres 16 + pgvector, Redis, backend, admin UI, portal UI (see [`docs/17-deployment.md`](docs/17-deployment.md)). |
+| **CI gate** | Docs checks, pytest + coverage, Vitest, `next build`, Playwright, audits, secrets baseline, license policy. |
 
 ---
 
@@ -74,62 +92,7 @@ Rotate `BOOTSTRAP_ADMIN_PASSWORD` and `SECRET_KEY` before any production traffic
 
 ---
 
-## Outcomes the engine is built to prove
-
-| | |
-|---|---|
-| **Speed without recklessness** | Registry-driven modules wire models, security, views, actions, and optional AI in one place — so **delivery stays fast** while **policy stays enforced**. |
-| **Zero throwaway CRUD** | Catch-all admin routes + view config — new tables ship with **matching UI patterns** without a separate front-end rewrite per entity. |
-| **Enterprise-shaped defaults** | Tenant isolation at the repository layer, record rules, signed webhooks, outbox + workers, SSE with tenant-scoped topics. |
-| **Investor- and buyer-ready story** | Observable, test-gated, documented — **serious software**, not a prototype dressed as a platform. |
-
-For the engineering checklist against the internal Definition of Done, see [`docs/34-inventory-and-status.md`](docs/34-inventory-and-status.md) and [`CHANGELOG.md`](CHANGELOG.md).
-
----
-
-## What ships in the box (summary)
-
-- **Identity & sessions** — JWT access/refresh with rotation, TOTP + recovery codes, password reset, HttpOnly session for the admin shell, share tokens for portal users.
-- **Data & rules** — Async SQLAlchemy 2, Alembic, soft delete hooks, record rules, strict tenant filters on repositories.
-- **AI** — Provider adapters (Anthropic, OpenAI, Ollama), BYOK storage, streaming chat, tool dispatcher, embeddings with pgvector.
-- **Ops** — Structured logs, Prometheus metrics, optional OpenTelemetry, backup and restore-drill documentation.
-- **Quality gate** — CI aggregates docs checks, tests, audits, and license policy.
-
----
-
-## For engineers (stack, modules, tests)
-
-> **AI agents** working in this repository: read [`docs/pre-prompt.md`](docs/pre-prompt.md) first — canonical stack and convention contract. Skipping it leads to invented dependencies and bypassed primitives.
-
-### Tech stack (authoritative detail)
-
-Binding list: [`docs/pre-prompt.md`](docs/pre-prompt.md) (stack section). In short: Python 3.13, FastAPI, SQLAlchemy 2 + asyncpg, Pydantic v2, Redis, Celery 5, PostgreSQL 16 + pgvector, Next.js 16 + React 19 + Mantine 9.
-
-**Monorepo (npm workspaces):** `admin-ui` and `portal-ui` only. Shared widgets and AI surfaces live under **`admin-ui/src/orbiteus-ui/`**; copy into `portal-ui` when the partner app needs the same UX (two deployable apps).
-
-### Module layout
-
-Full convention: [`docs/03-modules.md`](docs/03-modules.md). Skeleton:
-
-```
-modules/<name>/
-  manifest.py
-  model/domain.py, mapping.py, schemas.py
-  controller/repositories.py, services.py, router.py
-  security/access.yaml
-  view/*.xml, config.py
-  actions.py, ai.py, bootstrap.py, docs/spec.md
-```
-
-Register once:
-
-```python
-registry.register("your_module")
-```
-
-You get migrations, REST + OpenAPI, dynamic list/form/kanban/calendar/graph patterns, Command Palette actions, AI tool surface, audit, RBAC, and realtime hooks — without copying CRUD from another module.
-
-### Architecture at a glance
+## Architecture at a glance
 
 ```
 +---------------------------+     +---------------------------+
@@ -152,6 +115,50 @@ You get migrations, REST + OpenAPI, dynamic list/form/kanban/calendar/graph patt
 +--------------------+  |  session revoke  |  |  + webhooks       |
                         +------------------+------------------+
 ```
+
+---
+
+## What ships in the box (summary)
+
+For the full checklist against the internal Definition of Done, see [`docs/34-inventory-and-status.md`](docs/34-inventory-and-status.md) and [`CHANGELOG.md`](CHANGELOG.md). In one breath:
+
+- **Identity & sessions** — JWT access/refresh with rotation, TOTP + recovery codes, password reset flow, HttpOnly cookie session for the admin shell, share tokens for portal.
+- **Data & rules** — Async SQLAlchemy 2, Alembic, soft delete hooks, attribution columns, record rules, strict tenant filters on repositories.
+- **AI** — Provider adapters (Anthropic, OpenAI, Ollama), BYOK storage, streaming chat, tool dispatcher, embeddings table with pgvector.
+- **Ops** — Structured logs, Prometheus metrics families, optional OpenTelemetry, backup scripts and restore-drill documentation.
+- **Quality gate** — GitHub Actions workflow aggregating docs, tests, audits, and license reports.
+
+---
+
+## For engineers (stack & modules)
+
+### Tech stack (authoritative detail)
+
+Binding list lives in [`docs/pre-prompt.md`](docs/pre-prompt.md) (stack section). In short: Python 3.13, FastAPI, SQLAlchemy 2 + asyncpg, Pydantic v2, Redis, Celery 5, PostgreSQL 16 + pgvector, Next.js 16 + React 19 + Mantine 9.
+
+**Monorepo (npm workspaces):** `admin-ui` and `portal-ui` only. Cross-cutting widgets and AI surfaces (`PromptInput`, `AIDashboard`, shared form widgets) live under **`admin-ui/src/orbiteus-ui/`**. When the portal needs the same UX, copy the relevant files into `portal-ui` (two deployable apps, no separate `packages/*` workspace).
+
+### Module layout
+
+Full convention: [`docs/03-modules.md`](docs/03-modules.md). Skeleton:
+
+```
+modules/<name>/
+  manifest.py
+  model/domain.py, mapping.py, schemas.py
+  controller/repositories.py, services.py, router.py
+  security/access.yaml
+  view/*.xml, config.py
+  actions.py, ai.py, bootstrap.py, docs/spec.md
+```
+
+Register once:
+
+```python
+registry.register("your_module")
+```
+
+You get migrations against declared tables, REST + OpenAPI for each model, dynamic list/form/kanban/calendar/graph, Command Palette actions, AI tool surface, audit, RBAC, and realtime hooks — without copying CRUD from another module.
 
 ### Running tests
 
@@ -201,7 +208,7 @@ Details: [`docs/20-testing.md`](docs/20-testing.md) and `.github/workflows/ci.ym
 
 ## Contributing
 
-We welcome fixes, docs, and modules that follow the registry contract. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md).
+We welcome fixes, docs, and modules that follow the registry contract. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) (branching, review expectations, and the PR checklist) and [`AGENTS.md`](AGENTS.md) for automation policy.
 
 ---
 
@@ -213,4 +220,4 @@ Current line is **`v1.0.0`**. Release notes: [`CHANGELOG.md`](CHANGELOG.md). Hon
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Third-party manifests: [`THIRD_PARTY_LICENSES.python.json`](THIRD_PARTY_LICENSES.python.json), [`THIRD_PARTY_LICENSES.node.json`](THIRD_PARTY_LICENSES.node.json) (regenerated via `scripts/generate_licenses.sh`; CI enforces a no-GPL policy — see `docs/27-licenses.md`).
+MIT — see [`LICENSE`](LICENSE). Third-party manifests: [`THIRD_PARTY_LICENSES.python.json`](THIRD_PARTY_LICENSES.python.json), [`THIRD_PARTY_LICENSES.node.json`](THIRD_PARTY_LICENSES.node.json) (regenerated via `scripts/generate_licenses.sh`; CI enforces a no-GPL policy with a small compatibility allow-list — see `docs/27-licenses.md`).
