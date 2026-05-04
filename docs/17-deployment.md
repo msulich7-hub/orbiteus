@@ -4,7 +4,7 @@
 
 | File | Purpose | Profile defaults |
 |---|---|---|
-| `docker-compose.yml` | Dev / general use | postgres+pgvector, redis, backend (uvicorn reload), admin-ui (next dev) |
+| `docker-compose.yml` | Dev / general use | postgres+pgvector, redis, backend (uvicorn reload), admin-ui (:3000), portal-ui (:3001, next dev) |
 | `docker-compose.prod.yml` | Single-host production | adds nginx, pgbouncer, gunicorn, celery worker + beat, portal-ui, certbot |
 
 Both files share the same images. Profiles toggle optional services

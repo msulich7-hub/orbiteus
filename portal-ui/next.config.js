@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
+const path = require("node:path");
+
 const nextConfig = {
+  /**
+   * npm workspaces hoist `next` to the repo root; Turbopack needs that root.
+   */
+  turbopack: {
+    root: path.join(__dirname, ".."),
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
     return [
