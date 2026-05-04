@@ -49,7 +49,7 @@
 | **CSV import/export** | MISSING | — | core wave 3 |
 | **Server actions / cron exec** | DONE | `IrCron` rows + Celery Beat schedule (ADR-0015 supersedes prior Temporal stub) | runtime smoke test in next pass |
 | **Cache abstraction (Redis)** | DONE | `orbiteus_core/cache.py` (`Cache`, `get_redis`, `get_cache`) | RBAC migration to Redis pending |
-| **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` | per-IP active; tenant/user buckets ready to wire post-auth |
+| **Rate limiting** | DONE | `security/rate_limit.py` + `rate_limit_middleware.py` (IP + tenant + user buckets, all per-minute, Redis counters) | tested by `tests/test_rate_limit_buckets.py` (per-user 429, tenant bucket via JWT-decoded claims, IP bucket on anonymous path) |
 | **Realtime (SSE) + Pub/Sub backplane** | DONE | `orbiteus_core/realtime.py` (publisher + topic helpers + SSE stream) and `realtime_router.py` (`/api/realtime/subscribe`); BaseRepository events bridged via Redis Pub/Sub | nginx config already has `proxy_buffering off` (PR 2) |
 | **Realtime — frontend client** | DONE | `admin-ui/src/lib/realtime.ts` (`useRealtimeList`), `admin-ui/src/lib/auth.tsx` (`AuthProvider`/`useAuth`), wired into `ResourceList` so cross-browser edits refresh the list automatically | EventSource over the httpOnly session cookie; reconnects with exponential back-off |
 | **Audit log admin page** | DONE | `admin-ui/src/app/technical/audit-log/page.tsx`, sidebar entry "Log Activity" | reads `GET /api/base/audit-log` with model/actor/operation filters; subscribes to *every* tenant model's list topic so any CRUD/auth event refreshes the page in real time |
