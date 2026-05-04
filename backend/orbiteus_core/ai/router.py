@@ -358,26 +358,268 @@ async def _chat_stream(
 # Dashboard generator (NL → aggregate spec)
 # ---------------------------------------------------------------------------
 
+_DASHBOARD_SYSTEM_PROMPT = """You are a data-aware assistant that turns
+natural-language requests into a single JSON object describing an
+aggregate query against the Orbiteus framework.
+
+You MUST reply with ONE valid JSON object — no prose, no code fence,
+no commentary — matching this schema exactly:
+
+  {
+    "model":    "<dotted_model_name from the allowed list>",
+    "group_by": "<field name on that model>",
+    "op":       "count" | "sum" | "avg" | "min" | "max",
+    "measure":  "<field name>" | null,
+    "title":    "<short, human-readable chart title>"
+  }
+
+Rules:
+  * `op="count"` MUST set `measure` to null.
+  * `op` ∈ {sum, avg, min, max} MUST set `measure` to a numeric field
+    (typically *_revenue, *_amount, *_total, *_qty).
+  * Pick the simplest possible aggregation that answers the request.
+  * If the request is ambiguous, prefer `op="count"` grouped by the
+    most discriminating categorical field (`stage_id`, `status`,
+    `kind`, `team_id`, …).
+
+Allowed models for this tenant:
+{allowed_models}
+"""
+
+
+_DASHBOARD_RESPONSE_SHAPE = {
+    "model", "group_by", "op", "measure", "title",
+}
+
+
 @router.post("/dashboard")
 async def dashboard(
     body: dict = Body(...),
+    session: AsyncSession = Depends(get_session),
     ctx: RequestContext = Depends(require_auth),
 ) -> dict:
-    """Return a chart spec built from a natural-language prompt.
+    """Natural-language → aggregate spec → recharts payload.
 
-    For MVP the front-end is responsible for executing the aggregate query
-    that the AI returned (so we never grant AI direct DB access). The
-    response shape is stable so the UI can render with recharts.
+    Flow:
+      1. Resolve the tenant's AI provider + budget (same path as
+         `/api/ai/chat`).
+      2. Ask the model — with a tightly-shaped system prompt — to
+         return a JSON aggregate spec.
+      3. Hand the spec to `_run_aggregate(...)` which routes through
+         the same `apply_record_rules` path as
+         `GET /api/base/aggregate` (zero RBAC bypass).
+      4. Return `{title, chart_type, x_axis, y_axis, data, spec}` —
+         the exact shape `<AIDashboard>` consumes.
+
+    Errors:
+      * 412 — no AI credential / tenant context missing.
+      * 422 — the model returned something we can't parse / cite.
+      * 502 — provider call failed.
     """
-    if not ai_registry.accessible_models():
-        raise HTTPException(status_code=412, detail="No AI module configured for this tenant")
+    import json as _json
 
-    prompt = body.get("prompt") or ""
+    if ctx.tenant_id is None:
+        raise HTTPException(status_code=400, detail="tenant context required")
+
+    prompt = (body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+
+    p, cred, _msgs, _tools, _provider_name = await _resolve_chat_inputs(
+        {"messages": [], "scope": body.get("scope") or "all"}, session, ctx,
+    )
+
+    accessible = ai_registry.accessible_models() or []
+    if not accessible:
+        raise HTTPException(
+            status_code=412, detail="No AI module configured for this tenant",
+        )
+
+    system = _DASHBOARD_SYSTEM_PROMPT.format(
+        allowed_models="\n".join(f"  - {m}" for m in accessible),
+    )
+
+    try:
+        result = await p.chat(
+            cred["secret"],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+            tools=None,
+            model=body.get("model") or cred.get("model_default"),
+            max_tokens=512,
+            temperature=0.1,
+        )
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    if result.usage_tokens:
+        await increment(ctx.tenant_id, result.usage_tokens)
+
+    spec = _parse_dashboard_spec(result.text or "")
+
+    if spec["model"] not in accessible:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "ai.dashboard.model_not_allowed",
+                "message": (
+                    f"Model {spec['model']!r} is not in the AI scope for "
+                    "this tenant; pick a model from the accessible list."
+                ),
+            },
+        )
+
+    if not await _check_can_read(ctx, spec["model"]):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    data = await _run_aggregate(session, ctx, spec)
+
     return {
-        "title": prompt[:80] or "AI dashboard",
+        "title": spec["title"] or prompt[:80] or "AI dashboard",
         "chart_type": "bar",
-        "x_axis": "group",
+        # Two-key shape that matches the `<AIDashboard>` recharts
+        # caller — `category` for the X axis label, `value` for the
+        # bar height.
+        "x_axis": "category",
         "y_axis": "value",
-        "data": [],
-        "note": "MVP placeholder — PR 11 wires AI provider call to /api/base/aggregate",
+        "data": data,
+        "spec": spec,
+        "usage_tokens": result.usage_tokens,
     }
+
+
+def _parse_dashboard_spec(raw: str) -> dict[str, Any]:
+    """Coerce the model's reply to the dashboard JSON shape.
+
+    Tolerates a stray code fence around the JSON. Anything we can't
+    parse turns into a 422 — the contract is "valid JSON or nothing".
+    """
+    import json as _json
+    import re
+
+    text = raw.strip()
+    # Strip a markdown ```json ...``` fence if the model insisted on
+    # wrapping the payload.
+    fence_match = re.search(r"```(?:json)?\s*(\{[\s\S]+?\})\s*```", text)
+    if fence_match:
+        text = fence_match.group(1)
+    else:
+        # Fallback: pick the first `{...}` block.
+        brace_match = re.search(r"\{[\s\S]+\}", text)
+        if brace_match:
+            text = brace_match.group(0)
+
+    try:
+        parsed = _json.loads(text)
+    except _json.JSONDecodeError:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "ai.dashboard.invalid_json",
+                "raw": raw[:500],
+            },
+        )
+
+    missing = _DASHBOARD_RESPONSE_SHAPE - set(parsed)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "ai.dashboard.missing_fields",
+                "missing": sorted(missing),
+                "got": parsed,
+            },
+        )
+
+    op = parsed.get("op")
+    if op not in {"count", "sum", "avg", "min", "max"}:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "ai.dashboard.bad_op", "got": op},
+        )
+    if op != "count" and not parsed.get("measure"):
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "ai.dashboard.missing_measure", "op": op},
+        )
+    return parsed
+
+
+async def _check_can_read(ctx: RequestContext, model: str) -> bool:
+    from orbiteus_core.security.rbac import check_model_access
+
+    return await check_model_access(ctx, model, "read")
+
+
+async def _run_aggregate(
+    session: AsyncSession,
+    ctx: RequestContext,
+    spec: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Run the aggregate query the model asked for. Reuses the exact
+    same RBAC + tenant-filter path as `/api/base/aggregate`."""
+    from sqlalchemy import func, select
+
+    from orbiteus_core.auto_router import _model_registry
+    from orbiteus_core.security.rbac import apply_record_rules
+
+    entry = _model_registry.get(spec["model"])
+    if entry is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {spec['model']!r} is not registered.",
+        )
+
+    table = entry["table"]
+    group_col = table.c.get(spec["group_by"])
+    if group_col is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "ai.dashboard.bad_group_by",
+                "model": spec["model"],
+                "field": spec["group_by"],
+            },
+        )
+
+    op = spec["op"]
+    if op == "count":
+        agg = func.count(table.c.id)
+    else:
+        measure_col = table.c.get(spec["measure"])
+        if measure_col is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "ai.dashboard.bad_measure",
+                    "model": spec["model"],
+                    "field": spec["measure"],
+                },
+            )
+        agg = getattr(func, op)(measure_col)
+
+    stmt = select(group_col, agg).group_by(group_col)
+    if (
+        "tenant_id" in table.c
+        and ctx.tenant_id is not None
+        and not ctx.is_superadmin
+    ):
+        stmt = stmt.where(table.c.tenant_id == ctx.tenant_id)
+    stmt = apply_record_rules(stmt, table, ctx, spec["model"])
+
+    rows = (await session.execute(stmt)).all()
+
+    def _coerce(v: Any) -> Any:
+        if v is None:
+            return None
+        if hasattr(v, "as_tuple"):  # Decimal duck-typing
+            return float(v)
+        return v
+
+    return [
+        {"category": str(_coerce(g)) if g is not None else "—",
+         "value": _coerce(v)}
+        for g, v in rows
+    ]
