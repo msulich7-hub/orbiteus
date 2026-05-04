@@ -449,12 +449,11 @@ export default function LoginPage() {
                     and client so React doesn't report a hydration mismatch
                     when the logo URL arrives from /api/base/branding. */}
                 {branding.hydrated && branding.logo_url ? (
-                  <>
-                    <img src={branding.logo_url} alt="" aria-hidden style={{ height: 44, width: "auto", display: "block" }} />
-                    <Title order={2} c="dark.9" style={{ lineHeight: 1.2 }}>
-                      {branding.name}
-                    </Title>
-                  </>
+                  <img
+                    src={branding.logo_url}
+                    alt={branding.name}
+                    style={{ height: 44, width: "auto", display: "block" }}
+                  />
                 ) : (
                   <Title order={2} c="dark.9">
                     {branding.name}

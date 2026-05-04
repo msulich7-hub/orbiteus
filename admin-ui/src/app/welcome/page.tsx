@@ -127,14 +127,14 @@ export default function WelcomePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={branding.logo_url}
-                    alt=""
-                    aria-hidden
+                    alt={branding.name}
                     style={{ height: 44, width: "auto", display: "block" }}
                   />
-                ) : null}
-                <Title order={2} c="dark.9" style={{ lineHeight: 1.2 }}>
-                  {branding.name}
-                </Title>
+                ) : (
+                  <Title order={2} c="dark.9" style={{ lineHeight: 1.2 }}>
+                    {branding.name}
+                  </Title>
+                )}
               </Group>
               <Text
                 size="sm"
