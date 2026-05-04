@@ -193,7 +193,16 @@ async def test_check_model_access_per_role(rbac):
 @pytest.mark.asyncio
 async def test_pubsub_invalidate_refreshes_l1(rbac):
     """Replica A bumps Redis directly + publishes invalidate; Replica B's
-    `_invalidator_loop` should refresh its L1 within a short window."""
+    `_invalidator_loop` should refresh its L1 within a short window.
+
+    Caveat: any backend container subscribed to `rbac.invalidate` on the
+    same Redis instance WILL receive this notification and reload its
+    own L1 from the synthetic payload below. After the assertion we
+    therefore restore the real RBAC state by hitting the canonical
+    `/api/base/rbac/reload` endpoint on the running backend, so a
+    follow-up test (e.g. `tests/test_multi_tenant_isolation.py`) doesn't
+    inherit a one-role world.
+    """
     import asyncio
 
     from orbiteus_core.cache import get_redis
@@ -226,3 +235,28 @@ async def test_pubsub_invalidate_refreshes_l1(rbac):
         assert rbac._l1_access["newrole"]["model.y"]["unlink"] is True
     finally:
         await rbac.stop_invalidator()
+        # Restore the real RBAC matrix on every backend replica that
+        # subscribed to our synthetic notification. Best-effort —
+        # if the dev compose backend isn't reachable we silently move
+        # on; the only consequence is that a later integration test
+        # might see an empty cache, which is exactly what
+        # `_flush_buckets_before_each_test` and the hard-coded
+        # superadmin path already cover.
+        try:
+            import httpx
+
+            backend_url = os.environ.get("BACKEND_URL", "http://localhost:8000")
+            login = httpx.post(
+                f"{backend_url}/api/auth/login",
+                json={"email": "admin@example.com", "password": "admin1234"},
+                timeout=5,
+            )
+            if login.status_code == 200:
+                token = login.json()["access_token"]
+                httpx.post(
+                    f"{backend_url}/api/base/rbac/reload",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=10,
+                )
+        except Exception:  # noqa: BLE001
+            pass

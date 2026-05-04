@@ -53,3 +53,8 @@ backend/.venv/
 memory/
 .claude/
 .cursor/
+
+# Coverage
+coverage.xml
+.coverage
+htmlcov/

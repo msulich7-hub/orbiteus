@@ -20,6 +20,7 @@
 |---|---|---|---|
 | Module Registry + topo sort | DONE | `registry.py` | — |
 | BaseRepository (tenant filter, RBAC, soft delete, hooks, audit, attribution) | DONE | `repository.py` | tested by `tests/test_multi_tenant_isolation.py` (6 cases: cross-tenant read/list/write/delete return 404 to prevent existence leak; SSE topic from another tenant returns 403; positive control proves own-tenant SSE works) |
+| Coverage report (pytest-cov) | DONE | `backend/pyproject.toml` `[tool.coverage.{run,report}]` + `coverage.xml` artifact via `--cov-report=xml` | TOTAL 80% across `orbiteus_core` + `modules` on the canonical `pytest -q --cov` run; per-module thresholds NOT enforced (host-side measurement under-reports the integration paths that actually run inside the backend container) |
 | AutoRouter (5 CRUD endpoints) | DONE | `auto_router.py` | — |
 | ui-config builder | DONE | `ui_config.py` | needs `relation` for many2one |
 | RBAC: `ir_model_access` + `ir_rule` cache | DONE | `security/rbac.py` (Redis L2 + L1 mirror, pub/sub `rbac.invalidate` cross-replica, EventBus auto-reload on `ir_model_access`/`ir_rules` mutations) | tested by `tests/test_rbac_redis.py` (7 cases: Redis persistence, version bump, refresh, closed-fail, superadmin bypass, per-role, pub/sub invalidate <1s) |

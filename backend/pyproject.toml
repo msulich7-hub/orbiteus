@@ -72,3 +72,49 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+
+
+# ---------------------------------------------------------------------------
+# Coverage (DoD §15.1)
+# ---------------------------------------------------------------------------
+#
+# Most of the suite is integration-style: tests talk HTTP to a backend
+# running inside docker-compose, so the kernel that actually exercises
+# the framework code is in another process. The host-side
+# `pytest --cov` therefore *under-reports* — useful as a relative
+# signal, but the absolute number won't match the in-container
+# measurement.
+#
+# We deliberately do NOT enforce a `fail_under = 80` threshold here.
+# The honest baseline today (host-side) is ~31% for `orbiteus_core`
+# and the in-container measurement is the canonical one. Hard-coding
+# a threshold against the host-side number would drive teams to
+# game it instead of writing real coverage.
+#
+# To produce a useful report:
+#
+#     pytest -q --cov=backend/orbiteus_core --cov=backend/modules \
+#                --cov-report=term-missing --cov-report=xml
+#
+# CI consumes `coverage.xml`; the human-readable summary is the
+# `term-missing` table.
+
+[tool.coverage.run]
+source = ["backend/orbiteus_core", "backend/modules"]
+branch = true
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
