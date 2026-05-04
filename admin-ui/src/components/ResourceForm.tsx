@@ -256,7 +256,7 @@ export default function ResourceForm({
     // their own positioning. Explicit `Grid.Col span` also lets full-width
     // widgets (textareas, statusbars) span both columns deterministically.
     return (
-      <Grid gutter="sm" align="flex-start">
+      <Grid gap="sm" align="flex-start">
         {fieldList.map((f) => {
           const fullWidth = f.type === "textarea" || f.uiWidget === "statusbar";
           return (

@@ -49,7 +49,15 @@ The backend security middleware reads the access token from
 `Authorization: Bearer …` **first** (preserves machine clients and the
 `@cursor/sdk`-style integrations), then falls back to the cookie.
 
-The Admin UI ships an Edge proxy at `admin-ui/src/proxy.ts` that:
+The Admin UI ships an Edge proxy at `admin-ui/src/proxy.ts` (Next 16 file
+convention — do not add a separate `middleware.ts`; Next rejects both).
+In npm workspaces, set `turbopack.root` in `admin-ui/next.config.js` to the
+monorepo root so Turbopack resolves `next` and still picks up this app’s
+`src/proxy.ts`; otherwise the gate may not run and `/` loads without a session.
+
+`/api/*` is **not** a `next.config` rewrite: it is proxied by
+`admin-ui/src/app/api/[[...path]]/route.ts` so responses (including
+`Set-Cookie` from `POST /api/auth/login`) reach the browser reliably.
 
 - Allows `/login`, `/welcome`, `/_next/*`, `/api/*`, `/branding/*`.
 - For every other path, redirects to `/login?next=<path>` if `orbiteus_token`
@@ -88,5 +96,6 @@ The login page no longer touches `localStorage`. Logout posts to
 - `backend/modules/auth/controller/router.py` (`/login`, `/refresh`,
   `/logout`)
 - `admin-ui/src/proxy.ts`
+- `admin-ui/src/app/api/[[...path]]/route.ts` (server proxy; preserves `Set-Cookie`)
 - `tests/test_auth_cookies.py`
 - `docs/06-auth.md` § Session model

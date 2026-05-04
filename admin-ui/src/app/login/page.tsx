@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   Alert,
   Anchor,
@@ -38,6 +38,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useBranding } from "@/lib/branding";
+import { loginNeedsTotpStep } from "@/lib/loginTotp";
 
 const WELCOME_LS_KEY = "orbiteus_show_welcome";
 
@@ -101,12 +102,13 @@ const roleCards: {
 const fluidPx = { base: "md", sm: "xl", lg: "3rem", xl: "4rem" } as const;
 
 export default function LoginPage() {
-  const router = useRouter();
   const branding = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
 
   // DoD §9.9 — `/login` is now sign-in only. The welcome page lives at
   // `/welcome`. We keep `fullWelcome` as state so the legacy
@@ -149,6 +151,8 @@ export default function LoginPage() {
   }, []);
 
   const applyPublicDemoPrefill = useCallback(() => {
+    setTotpRequired(false);
+    setTotpCode("");
     if (DEMO_EMAIL_PUBLIC) setEmail(DEMO_EMAIL_PUBLIC);
     else setEmail(README_LOCAL_EMAIL);
     if (DEMO_PASSWORD_PUBLIC) setPassword(DEMO_PASSWORD_PUBLIC);
@@ -165,6 +169,8 @@ export default function LoginPage() {
     setAuthStep("welcome");
     setPassword("");
     setError("");
+    setTotpRequired(false);
+    setTotpCode("");
   }, []);
 
   useEffect(() => {
@@ -214,14 +220,27 @@ export default function LoginPage() {
       // Backend sets `orbiteus_token` httpOnly cookie in the Set-Cookie header
       // (see docs/adr/0017). The body still includes `access_token` for
       // non-browser clients but we no longer write it to localStorage.
-      await api.post("/auth/login", { email, password });
+      const body: { email: string; password: string; totp_code?: string } = { email, password };
+      if (totpRequired) {
+        body.totp_code = totpCode.trim();
+      }
+      const { data } = await api.post("/auth/login", body);
+      if (loginNeedsTotpStep(data)) {
+        setTotpRequired(true);
+        setTotpCode("");
+        return;
+      }
       // Hard navigation forces SSR + middleware to read the fresh cookie.
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next") || "/";
       window.location.assign(next);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || "Login failed");
+      if (axios.isAxiosError(err) && err.code === "ECONNABORTED") {
+        setError("Request timed out. Check that the API is running and reachable.");
+      } else {
+        const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        setError(typeof msg === "string" ? msg : "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -317,11 +336,36 @@ export default function LoginPage() {
               label="Email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setTotpRequired(false);
+                setTotpCode("");
+                setEmail(e.target.value);
+              }}
               required
               autoFocus
             />
-            <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <PasswordInput
+              label="Password"
+              value={password}
+              onChange={(e) => {
+                setTotpRequired(false);
+                setTotpCode("");
+                setPassword(e.target.value);
+              }}
+              required
+            />
+            {totpRequired ? (
+              <TextInput
+                id="sign-in-totp"
+                label="Authenticator or recovery code"
+                description="6-digit code from your app, or a one-time recovery code."
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                required
+                autoComplete="one-time-code"
+                inputMode="numeric"
+              />
+            ) : null}
             <Group justify="flex-end">
               <Anchor size="sm" c="dark" href="/forgot-password">
                 Forgot password?

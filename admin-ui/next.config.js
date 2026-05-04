@@ -1,15 +1,13 @@
 /** @type {import('next').NextConfig} */
+const path = require("node:path");
+
 const nextConfig = {
-  async rewrites() {
-    // In Docker: BACKEND_URL=http://backend:8000
-    // Locally:   BACKEND_URL unset → falls back to localhost
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
+  /**
+   * npm workspaces hoist `next` to the repo root. Point Turbopack there so
+   * `next/package.json` resolves; paths still resolve under this app’s `src/`.
+   */
+  turbopack: {
+    root: path.join(__dirname, ".."),
   },
 };
 

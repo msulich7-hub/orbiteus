@@ -20,7 +20,7 @@
  */
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
-  Alert, Badge, Button, Code, Collapse, Group, Loader, Pagination, Paper,
+  Alert, Badge, Button, Code, Group, Loader, Pagination, Paper,
   Select, Stack, Table, Text, TextInput, Title, Tooltip,
 } from "@mantine/core";
 import {
@@ -377,7 +377,7 @@ export default function AuditLogPage() {
                     </Table.Tr>
                     <Table.Tr>
                       <Table.Td colSpan={8} p={0} style={{ border: 0 }}>
-                        <Collapse in={isOpen}>
+                        {isOpen ? (
                           <Paper m="xs" p="sm" radius="sm" withBorder
                             bg="var(--mantine-color-default)">
                             <Stack gap="xs">
@@ -399,7 +399,7 @@ export default function AuditLogPage() {
                               )}
                             </Stack>
                           </Paper>
-                        </Collapse>
+                        ) : null}
                       </Table.Td>
                     </Table.Tr>
                   </Fragment>

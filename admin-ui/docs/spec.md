@@ -30,6 +30,8 @@ TSX files.
 admin-ui/src/
 ├── proxy.ts                       # Next 16 Edge gate (httpOnly cookie)
 ├── app/
+│   ├── api/
+│   │   └── [[...path]]/route.ts   # Server proxy → FastAPI (forwards Set-Cookie)
 │   ├── layout.tsx                 # MantineProvider + BrandingProvider
 │   ├── page.tsx                   # Dashboard (PromptInput + AIDashboard)
 │   ├── login/page.tsx             # Welcome + login form (cookie-based)

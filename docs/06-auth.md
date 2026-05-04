@@ -15,7 +15,7 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/auth/login` | Email + password → access + refresh |
+| POST | `/api/auth/login` | Email + password (+ optional `totp_code`) → access + refresh |
 | POST | `/api/auth/refresh` | Refresh token → new pair (rotation) |
 | POST | `/api/auth/logout` | Revokes current `jti` (Redis blacklist) |
 | POST | `/api/auth/2fa/enroll` | TOTP secret + QR code |
@@ -26,9 +26,13 @@
 ## 2FA
 
 - TOTP via `pyotp`, secrets stored in `users.totp_secret` (encrypted at rest).
-- `2fa_required` flag per user; when true, login returns a partial session
-  that only allows `/api/auth/2fa/verify`.
-- Backup codes (planned, tracked in tree-spec).
+- When `users.totp_enabled` is true, `POST /api/auth/login` with email + password
+  alone returns **HTTP 200** and JSON `{ "requires_totp": true, "access_token": "", ... }`
+  **without** setting session cookies. Submit the same email + password again with
+  `totp_code` (6-digit TOTP or a normalized recovery code); on success the handler
+  issues tokens and sets cookies like a normal login.
+- The admin UI `/login` page shows a second step when `requires_totp` is true.
+- Recovery codes are bcrypt-hashed, single-use; see `orbiteus_core.security.recovery_codes`.
 
 ## Session model
 
@@ -50,6 +54,9 @@ backend; non-browser clients keep using `Authorization: Bearer …`. See
   `middleware.ts`) redirects every protected route
   to `/login?next=<path>` when the cookie is missing — eliminates the
   Flash Of Authenticated Content the previous client-only gate produced.
+- **Admin `/api` hop.** `admin-ui/src/app/api/[[...path]]/route.ts` proxies to
+  FastAPI (`BACKEND_URL`) so responses keep `Set-Cookie` (plain `next.config`
+  rewrites to an external host can drop auth cookies).
 - **Portal**: cookie + JWT hybrid (share-link exchanged for a portal-scoped
   cookie); CSRF token required on state-changing requests.
 - **Revocation list** (`jti` blacklist) lives in Redis, scoped by tenant_id;

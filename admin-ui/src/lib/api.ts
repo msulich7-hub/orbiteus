@@ -1,12 +1,65 @@
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
 
+// ---------------------------------------------------------------------------
+// Types (kept above runtime code — Turbopack in monorepo Docker can fail to
+// parse `export interface` when it appears after executable statements).
+// ---------------------------------------------------------------------------
+
+export interface FieldMeta {
+  name: string;
+  type:
+    | "text"
+    | "email"
+    | "tel"
+    | "number"
+    | "textarea"
+    | "select"
+    | "boolean"
+    | "date"
+    | "many2one"
+    | "monetary"
+    | "tags";
+  required: boolean;
+  label: string;
+  /** Target model for many2one, e.g. crm.customer */
+  relation?: string;
+  options?: { value: string; label: string }[];
+  /** ISO-4217 code for monetary fields (e.g. "PLN", "EUR"). */
+  currency_code?: string;
+}
+
+export interface ModelConfig {
+  name: string;
+  label: string;
+  fields: FieldMeta[];
+  views: {
+    list: string | null;
+    form: string | null;
+    kanban: string | null;
+    search: string | null;
+    calendar: string | null;
+    graph: string | null;
+  };
+}
+
+export interface ModuleConfig {
+  name: string;
+  label: string;
+  category: string;
+  models: ModelConfig[];
+}
+
+export interface UiConfig {
+  modules: ModuleConfig[];
+}
+
 /**
  * Shared axios instance.
  *
  * - `withCredentials: true` so the browser sends the `orbiteus_token` cookie
- *   on same-origin /api/* calls (Next rewrites land both apps on the same
- *   origin via `next.config.js`).
+ *   on same-origin `/api/*` calls (proxied server-side to FastAPI in
+ *   `app/api/[[...path]]/route.ts` so `Set-Cookie` from login is preserved).
  * - No request interceptor injects an Authorization header any more — the
  *   backend reads JWT from the httpOnly cookie set by /api/auth/login.
  *   See docs/adr/0017-httponly-cookie-session.md.
@@ -14,6 +67,8 @@ import { notifications } from "@mantine/notifications";
 export const api = axios.create({
   baseURL: "/api",
   withCredentials: true,
+  /** Avoid an indefinite spinner when the rewrite target or DB is unreachable. */
+  timeout: 45_000,
 });
 
 // Legacy localStorage cleanup: remove any token left over from the previous
@@ -115,56 +170,4 @@ export async function deleteRecord(resource: string, id: string) {
 export async function fetchUiConfig(): Promise<UiConfig> {
   const { data } = await api.get("/base/ui-config");
   return data;
-}
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface FieldMeta {
-  name: string;
-  type:
-    | "text"
-    | "email"
-    | "tel"
-    | "number"
-    | "textarea"
-    | "select"
-    | "boolean"
-    | "date"
-    | "many2one"
-    | "monetary"
-    | "tags";
-  required: boolean;
-  label: string;
-  /** Target model for many2one, e.g. crm.customer */
-  relation?: string;
-  options?: { value: string; label: string }[];
-  /** ISO-4217 code for monetary fields (e.g. "PLN", "EUR"). */
-  currency_code?: string;
-}
-
-export interface ModelConfig {
-  name: string;
-  label: string;
-  fields: FieldMeta[];
-  views: {
-    list: string | null;
-    form: string | null;
-    kanban: string | null;
-    search: string | null;
-    calendar: string | null;
-    graph: string | null;
-  };
-}
-
-export interface ModuleConfig {
-  name: string;
-  label: string;
-  category: string;
-  models: ModelConfig[];
-}
-
-export interface UiConfig {
-  modules: ModuleConfig[];
 }

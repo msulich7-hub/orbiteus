@@ -7,7 +7,7 @@
 |   admin-ui (Next.js 16)   |     |   portal-ui (Next.js 16)  |
 |   internal users (RBAC)   |     |   external users / share  |
 +-------------+-------------+     +-------------+-------------+
-              |  /api/* (Next rewrites, same-origin)          |
+              |  /api/* (admin-ui: server proxy; portal: rewrites)          |
               v                                  v
 +------------------------------------------------------------------+
 |  FastAPI behind Gunicorn + UvicornWorker (modular monolith)      |

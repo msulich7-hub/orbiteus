@@ -54,7 +54,7 @@ product example* (CRM-MVP) that demonstrates the platform.
 |   admin-ui (Next.js 16)   |     |   portal-ui (Next.js 16)  |
 |   internal users (RBAC)   |     |   external users / share  |
 +-------------+-------------+     +-------------+-------------+
-              |  /api/*  (Next rewrites + same-origin)        |
+              |  /api/*  (admin-ui: server proxy; portal: rewrites + same-origin)|
               v          v                       v            v
 +------------------------------------------------------------------+
 |  FastAPI behind Gunicorn + UvicornWorker                         |
