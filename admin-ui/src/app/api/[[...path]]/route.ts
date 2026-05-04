@@ -53,6 +53,11 @@ async function proxy(req: NextRequest, segments: string[]) {
   const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("content-length");
+  // Reverse proxies often set Connection: upgrade for WebSockets; forwarding
+  // that to undici's fetch() → FastAPI triggers "invalid connection header".
+  for (const name of HOP_BY_HOP) {
+    headers.delete(name);
+  }
 
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const init: RequestInit & { duplex?: string } = {
