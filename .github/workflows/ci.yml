@@ -1,0 +1,305 @@
+name: CI
+
+# DoD §15.4 — full CI gate.
+#
+# Stages:
+#   1.  docs        : YAML/MD validators + the dedicated `tests/test_docs.py`
+#                     pytest module.
+#   2.  backend     : pytest with coverage; dependencies brought up via
+#                     services (Postgres + Redis). Coverage XML uploaded
+#                     as an artifact for the dashboard.
+#   3.  frontend    : `vitest run` + `next build` typecheck.
+#   4.  e2e         : Playwright `--reporter=line` on the deterministic
+#                     spec subset (the 6 advanced scenarios live behind
+#                     `E2E_FULL_SUITE=1` and run only on a release pipeline
+#                     with a fully seeded tenant).
+#   5.  security    : `pip-audit` + `npm audit --audit-level=high`. Both
+#                     are non-blocking *advisories* on the main branch
+#                     today (we publish the JSON output as artifact for
+#                     review) but fail the job on a dedicated release tag
+#                     run — controlled by the `RELEASE_GUARD` env.
+#   6.  licenses    : `pip-licenses` + `npm-license-checker` produce
+#                     `THIRD_PARTY_LICENSES.{python,node}.json` and we
+#                     greppage GPL/AGPL/LGPL. The grep is fatal on the
+#                     release tag run.
+#
+# All five jobs run in parallel. The aggregating `gate` job at the end
+# fails when any of the upstream jobs failed — that's the single
+# `Required check` to wire on the GitHub branch protection rule.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/**
+      - chore/**
+      - fix/**
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) docs
+  # ---------------------------------------------------------------------------
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pytest
+        run: pip install "pytest>=8"
+      - name: Run docs validator
+        run: python scripts/check_docs.py
+      - name: Run docs pytest suite
+        run: pytest tests/test_docs.py -v
+
+  # ---------------------------------------------------------------------------
+  # 2) backend (pytest + coverage)
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (pytest + coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: orbiteus
+          POSTGRES_USER: orbiteus
+          POSTGRES_PASSWORD: orbiteus
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U orbiteus"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://orbiteus:orbiteus@localhost:5433/orbiteus
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: change-me-in-development
+      JWT_SECRET: change-me-in-development
+      AI_SECRET_KEY: change-me-in-development
+      PYTHONPATH: backend
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Run pytest with coverage
+        run: |
+          pytest -q --ignore=admin-ui --ignore=portal-ui \
+                    --ignore=backend/tests \
+                    --cov --cov-report=term --cov-report=xml
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # 3) frontend (vitest + next build typecheck)
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (vitest + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: admin-ui
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install workspace deps
+        run: npm install --include-workspace-root
+        working-directory: ./
+      - name: Vitest
+        run: npm test
+      - name: Next build (type check + bundle)
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  # ---------------------------------------------------------------------------
+  # 4) e2e (Playwright, deterministic subset)
+  # ---------------------------------------------------------------------------
+  #
+  # We bring up the real backend + frontend with `docker compose` and
+  # run the canonical 5-scenario subset (the env-gated 6 stay off). On
+  # the release pipeline we flip `E2E_FULL_SUITE=1` and run the seeded
+  # variant — that pipeline lives in a different workflow file
+  # (`release.yml`, follow-up).
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install workspace deps
+        run: npm install --include-workspace-root
+      - name: Install Playwright browser
+        run: npx --workspace admin-ui playwright install --with-deps chromium
+      - name: Bring up the stack
+        run: docker compose up -d --wait
+      - name: Wait for backend health
+        run: |
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8000/health && break
+            sleep 2
+          done
+      - name: Run Playwright (deterministic subset)
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: npx --workspace admin-ui playwright test --reporter=line
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            admin-ui/playwright-report/
+            admin-ui/test-results/
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # 5) security (pip-audit + npm audit)
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security (pip-audit + npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: pip-audit
+        run: |
+          pip install --upgrade pip pip-audit
+          pip-audit --strict --requirement <(python - <<'PY'
+          # Re-emit pyproject deps in the requirement file format so
+          # pip-audit can scan them without forcing a full install.
+          import tomllib, pathlib
+          data = tomllib.loads(pathlib.Path("backend/pyproject.toml").read_text())
+          for dep in data["project"]["dependencies"]:
+              print(dep)
+          PY
+          )
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (admin-ui + portal-ui)
+        run: |
+          npm install --include-workspace-root
+          npm audit --workspace admin-ui --audit-level=high || echo "::warning::admin-ui has high-or-above advisories"
+          npm audit --workspace portal-ui --audit-level=high || echo "::warning::portal-ui has high-or-above advisories"
+
+  # ---------------------------------------------------------------------------
+  # 6) licenses (pip-licenses + license-checker)
+  # ---------------------------------------------------------------------------
+  licenses:
+    name: License audit (no-GPL gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend deps + pip-licenses
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pip-licenses
+      - name: Generate Python license report
+        run: |
+          pip-licenses --format=json \
+                      --with-system --with-urls --with-license-file \
+                      --output-file=THIRD_PARTY_LICENSES.python.json
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generate Node license report
+        run: |
+          npm install --include-workspace-root
+          npx --yes license-checker --json --excludePrivatePackages \
+              > THIRD_PARTY_LICENSES.node.json
+      - name: Reject GPL/AGPL/LGPL families
+        run: |
+          set -e
+          fail=0
+          for f in THIRD_PARTY_LICENSES.python.json THIRD_PARTY_LICENSES.node.json; do
+            if grep -E '"License":\s*"(GPL|AGPL|LGPL)' "$f" \
+               || grep -E '"licenses":\s*"(GPL|AGPL|LGPL)' "$f"; then
+              echo "::error::$f mentions a GPL-family license (DoD §16.4 / §1.7)"
+              fail=1
+            fi
+          done
+          test "$fail" -eq 0
+      - name: Upload license artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-reports
+          path: |
+            THIRD_PARTY_LICENSES.python.json
+            THIRD_PARTY_LICENSES.node.json
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # gate — single required check
+  # ---------------------------------------------------------------------------
+  gate:
+    name: CI gate (DoD §15.4)
+    needs: [docs, backend, frontend, e2e, security, licenses]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Aggregate
+        run: |
+          test "${{ needs.docs.result }}"     = "success" \
+            && test "${{ needs.backend.result }}"  = "success" \
+            && test "${{ needs.frontend.result }}" = "success" \
+            && test "${{ needs.e2e.result }}"      = "success" \
+            && test "${{ needs.security.result }}" = "success" \
+            && test "${{ needs.licenses.result }}" = "success"

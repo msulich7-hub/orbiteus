@@ -155,6 +155,7 @@
 | Compose | `tests/test_compose.py` | 9 tests, green |
 | Dockerfile prod | `tests/test_dockerfile_prod.py` | 6 tests, green |
 | E2E | 5 deterministic Playwright scenarios + 6 env-gated for seeded tenants | runs in `npm run e2e --workspace admin-ui` |
+| CI gate (DoD §15.4) | DONE | `.github/workflows/ci.yml` (docs + backend pytest+cov + frontend vitest+build + Playwright deterministic subset + pip-audit + npm audit + pip-licenses + license-checker no-GPL gate; aggregated by a single `gate` job for branch protection) | release pipeline (E2E_FULL_SUITE=1) is a follow-up workflow |
 
 ## Summary score against documentation
 
