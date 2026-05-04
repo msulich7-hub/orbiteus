@@ -148,18 +148,50 @@ async def login(
     """Authenticate user and return JWT tokens."""
     _enforce_rate_limit(request, "login", limit=300, window_seconds=60)
     from modules.base.controller.repositories import UserRepository
+    from orbiteus_core.audit import write_audit
+
+    request_id = getattr(request.state, "request_id", None)
+    client_host = request.client.host if request.client else None
+    ip_meta = {"ip": client_host} if client_host else {}
 
     ctx = RequestContext(is_superadmin=True)
     repo = UserRepository(session, ctx)
     user = await repo.get_by_email(payload.email)
 
     if user is None or not verify_password(payload.password, user.password_hash):
+        # Record the failed attempt before bouncing — `actor=user` is
+        # the right label even when the user couldn't be identified
+        # (the human submitting the form is still the actor).
+        await write_audit(
+            session,
+            actor="user",
+            operation="login_failed",
+            model="auth.session",
+            tenant_id=user.tenant_id if user else None,
+            user_id=user.id if user else None,
+            request_id=request_id,
+            diff={"email": payload.email, "reason": "invalid_credentials"},
+            metadata=ip_meta,
+            autocommit=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     if not user.is_active:
+        await write_audit(
+            session,
+            actor="user",
+            operation="login_failed",
+            model="auth.session",
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            request_id=request_id,
+            diff={"email": payload.email, "reason": "disabled"},
+            metadata=ip_meta,
+            autocommit=True,
+        )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account disabled")
 
     # TOTP check (incl. recovery codes — PR final).
@@ -185,10 +217,36 @@ async def login(
         else:
             totp = pyotp.TOTP(user.totp_secret)
             if not totp.verify(payload.totp_code):
+                await write_audit(
+                    session,
+                    actor="user",
+                    operation="login_failed",
+                    model="auth.session",
+                    tenant_id=user.tenant_id,
+                    user_id=user.id,
+                    request_id=request_id,
+                    diff={"email": payload.email, "reason": "invalid_totp"},
+                    metadata=ip_meta,
+                    autocommit=True,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid TOTP code",
                 )
+
+    # ── successful authentication ────────────────────────────────────────
+    await write_audit(
+        session,
+        actor="user",
+        operation="login",
+        model="auth.session",
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        request_id=request_id,
+        diff={"email": payload.email},
+        metadata=ip_meta,
+        autocommit=True,
+    )
 
     # For now, issue a token with the first available company to avoid
     # blocking users when the frontend has no dedicated company picker yet.
@@ -527,6 +585,23 @@ async def password_reset_request(
         subject="Reset your Orbiteus password",
         body_text=body_text,
     )
+
+    from orbiteus_core.audit import write_audit
+
+    request_id = getattr(request.state, "request_id", None)
+    client_host = request.client.host if request.client else None
+    await write_audit(
+        session,
+        actor="user",
+        operation="password_reset_requested",
+        model="auth.session",
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        request_id=request_id,
+        diff={"email": user.email},
+        metadata={"ip": client_host} if client_host else {},
+        autocommit=True,
+    )
     return {"status": "ok"}
 
 
@@ -620,6 +695,23 @@ async def password_reset_confirm(
         await _revoke_jti(jti, data.get("exp", 0))
     except Exception:  # noqa: BLE001
         pass
+
+    from orbiteus_core.audit import write_audit
+
+    request_id = getattr(request.state, "request_id", None)
+    client_host = request.client.host if request.client else None
+    await write_audit(
+        session,
+        actor="user",
+        operation="password_reset_completed",
+        model="auth.session",
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        request_id=request_id,
+        diff={"email": user.email},
+        metadata={"ip": client_host} if client_host else {},
+        autocommit=True,
+    )
 
     return {"status": "ok"}
 

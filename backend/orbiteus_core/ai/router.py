@@ -204,6 +204,38 @@ async def chat(
     if result.usage_tokens:
         await increment(ctx.tenant_id, result.usage_tokens)
 
+    # Audit every tool call the model invoked (DoD §4.3 — `actor=ai`).
+    # Tool arguments may carry the user's free-text prompt fragments,
+    # so we rely on `redact_payload` (via `write_audit(redact=True)`)
+    # to scrub passwords/secrets/PII before persisting.
+    if result.tool_calls:
+        from orbiteus_core.audit import write_audit
+
+        for tool_call in result.tool_calls:
+            tool_name = tool_call.get("name") if isinstance(tool_call, dict) else None
+            tool_args = tool_call.get("arguments") if isinstance(tool_call, dict) else None
+            tool_id = tool_call.get("id") if isinstance(tool_call, dict) else None
+            await write_audit(
+                session,
+                actor="ai",
+                operation="tool_call",
+                model="ai.tool",
+                tenant_id=ctx.tenant_id,
+                user_id=ctx.user_id,
+                diff={
+                    "name": tool_name,
+                    "arguments": tool_args,
+                    "tool_call_id": tool_id,
+                },
+                metadata={
+                    "provider": provider_name,
+                    "ai_model": body.get("model") or cred.get("model_default"),
+                    "scope": body.get("scope") or "all",
+                    "usage_tokens": result.usage_tokens,
+                },
+            )
+        await session.commit()
+
     return {
         "text": result.text,
         "tool_calls": result.tool_calls,
