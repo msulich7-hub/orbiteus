@@ -253,10 +253,27 @@ def pydantic_schema_to_fields(schema: type[BaseModel], model_name: str) -> list[
         }
         if options is not None:
             entry["options"] = options
+        if ui_type == "monetary":
+            # Per-instance default; per-tenant override is wave 3 (`res.currency`
+            # primitive). For now we surface the value here so the UI doesn't
+            # have to hardcode "PLN" in two places.
+            entry["currency_code"] = _default_currency_code(model_name, field_name)
 
         result.append(entry)
 
     return result
+
+
+def _default_currency_code(model_name: str, field_name: str) -> str:  # noqa: ARG001
+    """Return the currency ISO-4217 code to render against a monetary field.
+
+    Defaults to ``PLN`` for the framework's reference deployment. The
+    hook signature accepts ``model_name`` / ``field_name`` so a future
+    implementation can plug in per-model or per-field overrides
+    (e.g. `crm.lead.expected_revenue → tenant default`,
+    `accounting.invoice.amount_total → invoice's own currency`).
+    """
+    return "PLN"
 
 
 def build_ui_config() -> dict[str, Any]:

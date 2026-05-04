@@ -124,6 +124,8 @@ export interface FieldMeta {
   /** Target model for many2one, e.g. crm.customer */
   relation?: string;
   options?: { value: string; label: string }[];
+  /** ISO-4217 code for monetary fields (e.g. "PLN", "EUR"). */
+  currency_code?: string;
 }
 
 export interface ModelConfig {

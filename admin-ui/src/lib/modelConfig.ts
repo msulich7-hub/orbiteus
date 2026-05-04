@@ -68,6 +68,7 @@ function fieldMetaToFieldDef(f: FieldMeta): FieldDef {
     required: f.required,
     options: f.options,
     relation: f.relation,
+    currencyCode: f.currency_code,
   };
 }
 
@@ -147,6 +148,7 @@ function enrichFieldDef(field: FieldDef, meta?: FieldMeta): FieldDef {
       type: meta.type,
       relation: meta.relation ?? field.relation,
       options: field.options ?? meta.options,
+      currencyCode: meta.currency_code ?? field.currencyCode,
     };
   }
   if (field.type === "text" && meta.type !== "text") {

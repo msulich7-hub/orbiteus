@@ -2,7 +2,8 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { FieldMeta } from "@/lib/api";
 import { StatusBadge } from "@/components/widgets/StatusBadge";
-import { displayMany2oneCell, formatListDate, formatMoney } from "@/lib/formatters";
+import { displayMany2oneCell, formatListDate } from "@/lib/formatters";
+import { MonetaryCell } from "@/components/widgets/MonetaryField";
 import Link from "next/link";
 import {
   Title, Text, Button, Table, Loader, Alert, Group, Stack,
@@ -50,7 +51,12 @@ function useEnhancedColumns(columns: Column[], fieldMeta?: FieldMeta[]): Column[
         };
       }
       if (m?.type === "monetary") {
-        return { ...col, render: (v: unknown) => formatMoney(v) };
+        return {
+          ...col,
+          render: (v: unknown) => (
+            <MonetaryCell value={v} currencyCode={m.currency_code} />
+          ),
+        };
       }
       if (m?.type === "many2one") {
         return {

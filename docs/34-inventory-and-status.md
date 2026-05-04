@@ -99,7 +99,7 @@
 | **Hardcoded CRM/base/technical pages** | DELETED | catch-all `[module]/[model]` only | PR 10 |
 | **Many2one widget** | PARTIAL | `widgets/Many2OneField.tsx` | needs FK resolution from API |
 | **Badge widget** | PARTIAL | `widgets/StatusBadge.tsx` | not wired to lists |
-| **Monetary widget** | MISSING | — | core CRM-MVP |
+| **Monetary widget** | DONE | `components/widgets/MonetaryField.tsx` (`MonetaryCell` for list cells, `MonetaryInput` for form input; reads `currency_code` from ui-config FieldMeta, falls back to `PLN`); backend serves `currency_code` in `/api/base/ui-config` for every `monetary` field | tested by `components/widgets/MonetaryField.test.tsx` (7 cases) |
 | **Statusbar widget** | PARTIAL | `widgets/StatusbarField.tsx` | not wired to lead.stage |
 | **`packages/ui` workspace** | DONE | npm workspaces + `packages/ui` consumed by admin-ui | PR 10 |
 | **`<PromptInput>`** | DONE | `packages/ui/src/ai/PromptInput.tsx` + `useAIContext` hook | PR 10 |

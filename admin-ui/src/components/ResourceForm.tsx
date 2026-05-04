@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import type { FormPanels } from "@/lib/modelConfig";
 import Many2OneField from "@/components/widgets/Many2OneField";
 import StatusbarField from "@/components/widgets/StatusbarField";
+import { MonetaryInput } from "@/components/widgets/MonetaryField";
 
 export interface FieldDef {
   key: string;
@@ -207,7 +208,7 @@ export default function ResourceForm({
     );
 
     if (f.type === "monetary") return (
-      <NumberInput
+      <MonetaryInput
         key={f.key}
         label={f.label}
         required={f.required}
@@ -215,9 +216,7 @@ export default function ResourceForm({
         value={val === "" || val == null ? undefined : Number(val)}
         onChange={(v) => set(f.key, v ?? 0)}
         error={err}
-        decimalScale={2}
-        thousandSeparator=" "
-        suffix={` ${f.currencyCode ?? "PLN"}`}
+        currencyCode={f.currencyCode}
         disabled={ro}
       />
     );
