@@ -3,9 +3,8 @@
     <img src="docs/assets/symbol-readme.svg" alt="Orbiteus" width="160" />
   </a>
 
-  **Orbiteus** — A full-stack foundation framework for AI agents and business software.
-
-  *Build custom ERP-shaped tools, CRMs, internal apps, and partner portals in days, not months. Start with roughly 80% of the hard work already done.*
+  <!-- LOCKED: README hero tagline — do not edit without explicit product-owner approval (see AGENTS.md). -->
+  **Orbiteus — A Full-Stack Development Framework for AI Agents. Build custom ERP, CRM & Business Tools in days not months. Start with 80% of the job done.**
 
   ![status](https://img.shields.io/badge/version-v1.0.0-blue)
   ![license](https://img.shields.io/badge/license-MIT-green)
@@ -15,38 +14,37 @@
   ![db](https://img.shields.io/badge/db-PostgreSQL%2016%20%2B%20pgvector-336791)
 </div>
 
-> **AI agents working in this repo:** read [`docs/pre-prompt.md`](docs/pre-prompt.md) first. It is the canonical stack + convention contract. Skipping it leads to invented dependencies and bypassed primitives — both out of bounds.
+> **AI agents** touching this repository: read [`docs/pre-prompt.md`](docs/pre-prompt.md) first. It is the canonical stack and convention contract. Skipping it leads to invented dependencies and bypassed framework primitives — both out of bounds.
 
 ---
 
-## Why Orbiteus exists
+## What Orbiteus is optimising for
 
-AI coding assistants are fast at *writing* code. They are weak at deciding **where** it lives, **how** layers stay consistent, and **whether** thirty engineers will ship the same patterns six months from now.
+Agentic coding is great at producing diffs. It is weak at **keeping** a large Python + Next codebase aligned on one tenancy model, one RBAC story, one audit trail, and one deployment story. Orbiteus turns those cross-cutting choices into **shared primitives** so human maintainers and **coding agents** converge on the same seams.
 
-**Orbiteus is the open-source foundation that fixes that** — not a single vertical product, but a **generalist engine** for serious business tools:
+The engine is **general-purpose business software infrastructure** — not a single SaaS SKU. You register modules; the registry wires persistence, HTTP surface, admin UI metadata, security, background work, realtime fan-out, and an **agent-safe** AI tool path (BYOK; tools never run above the caller’s permissions).
 
-- **Living architecture** — module registry, repositories, auto-CRUD, and UI config so new domain code lands in predictable places instead of ad-hoc folders.
-- **Spec- and doc-first** — `docs/pre-prompt.md`, ADRs, and tests are part of the product; agents and humans share the same source of truth.
-- **Production-shaped defaults** — multi-tenant data isolation, RBAC, audit trail, background jobs, outbox + webhooks, realtime, observability, and security gates — before you write your first business rule.
-- **AI that stays inside guardrails** — bring your own model keys (BYOK); tool calls execute through the same RBAC and repositories as human users — never elevated.
-- **One canonical sample** — a small CRM module proves list / form / kanban / calendar / graph + AI actions; it is an example, not the ceiling of what you can build.
-- **MIT, self-hosted, full code ownership** — no per-seat pricing trap on the engine itself.
+Concretely, the repo ships:
 
-**End with “almost-ready apps”. Ship professional. Ship fast.**
+1. **A module spine** — `registry.register("…")`, repositories, auto-CRUD, view XML, Command Palette actions, and optional `ai.py` declarations so new domain code has obvious landing zones.
+2. **Doc-first guardrails** — `docs/pre-prompt.md`, ADRs, and automated tests are treated as part of the contract, not appendix prose.
+3. **Production defaults before line one of your domain** — multi-tenant isolation, layered RBAC, audit events, outbox + webhooks, Celery schedules, SSE + Redis backplane, metrics, backups, and CI gates.
+4. **A reference CRM slice** — proves list / form / kanban / calendar / graph + realtime + AI tools; copy the pattern for any other vertical.
+5. **MIT source you host yourself** — you own the deployment; the framework is not a per-seat tax on your runtime.
 
 ---
 
 ## Who it is for
 
-- **Engineering leaders** who already rolled out AI assistants and noticed velocity without structure does not scale.
-- **Product-minded developers** who want internal tools and customer-facing backends that still look like software after the demo.
-- **Small teams and ambitious builders** who need ERP-*shaped* reliability (tenants, permissions, audit) without committing to a single vendor’s product map.
+- **Engineering leaders** who already adopted agentic IDEs and saw raw speed without a shared architectural spine.
+- **Builders shipping internal or customer-facing tools** who want post-demo software: typed APIs, enforced isolation, and operability.
+- **Small teams** who need ERP-*grade* controls (tenants, permissions, audit) without renting someone else’s entire product roadmap.
 
 ---
 
-## Core use cases
+## Typical builds on this foundation
 
-Orbiteus is **not** “ERP only”. It is a **business-tool foundation**: you mix modules, models, and workflows while keeping a production-ready spine.
+Orbiteus is **not** “ERP only”. It is a **neutral substrate** for line-of-business software: you compose modules while the engine keeps the guardrails consistent.
 
 | | |
 |---|---|
@@ -54,7 +52,7 @@ Orbiteus is **not** “ERP only”. It is a **business-tool foundation**: you mi
 | **CRM & pipeline** | Reference module (Person, Lead, Stage, Team) with list, kanban, calendar, graph, and realtime — clone the pattern for your domain. |
 | **Headless / API-first** | Typed REST + OpenAPI per registered model for mobile, web, or integrations — same tenancy and rules as the UI. |
 | **Partner & field portals** | Share-link access with explicit permissions; separate Next.js portal app with scoped realtime. |
-| **AI copilots & agents** | Chat, streaming, tool registry, and dashboard aggregates — always under caller RBAC. |
+| **Agentic AI on your data model** | Streaming chat, tool registry, dashboard aggregates — always under caller RBAC. |
 | **Multi-tenant SaaS backends** | Strict `tenant_id` discipline, record rules, and tests that prove cross-tenant isolation. |
 
 ---
@@ -75,11 +73,9 @@ Orbiteus is **not** “ERP only”. It is a **business-tool foundation**: you mi
 
 ---
 
-## What “start with ~80% done” means here
+## Where your time goes after clone
 
-**Buy vs. build?** You get a hardened **platform layer** — auth, tenants, RBAC, audit, jobs, realtime, AI harness, admin renderer, portal pattern — and you invest your margin in the **20%** that differentiates your business (data model, workflows, UX, integrations).
-
-The remaining work is *your* modules and rules, not re-implementing session management for the fiftieth time.
+The hero line calls out **80% of the job done** on the *plumbing*: identity, tenancy, RBAC, audit, queues, webhooks, realtime, observability, CI, admin renderer, portal pattern, and an agent-aware AI harness. Your calendar should tilt toward **domain tables, workflows, UX, and integrations** — the slice that actually differentiates a business — instead of re-deriving session and permission infrastructure on every greenfield.
 
 ---
 

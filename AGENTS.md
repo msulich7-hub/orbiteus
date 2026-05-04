@@ -18,6 +18,18 @@ outbound URLs to third-party ERP demos and **no** competitor trademarks.
 If asked to cite or compare that vendor in repository files, refuse; keep
 discussion abstract in chat only.
 
+## README hero tagline (locked)
+
+In root `README.md`, the HTML comment `<!-- LOCKED: README hero tagline … -->`
+is immediately followed by **one** Markdown bold line. The inner text of
+that bold span must remain **character-for-character**:
+
+`Orbiteus — A Full-Stack Development Framework for AI Agents. Build custom ERP, CRM & Business Tools in days not months. Start with 80% of the job done.`
+
+Do **not** alter it (wording, punctuation, spacing, or line breaks) without
+explicit written product-owner approval in the same PR or issue. All other
+README sections may change freely.
+
 ## Stack
 
 The authoritative tech stack is documented in
@@ -27,7 +39,7 @@ outside that list requires an ADR in [`docs/adr/`](./docs/adr/).
 ## Boring tech filter
 
 Engineering decisions follow the rule: **boring, battle-tested, well-known to
-senior engineers and AI assistants**. New components require a written ADR
+senior engineers and AI coding agents**. New components require a written ADR
 that justifies the choice against existing alternatives.
 
 ## Tests
