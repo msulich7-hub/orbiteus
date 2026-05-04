@@ -116,7 +116,9 @@ For the full checklist against the internal Definition of Done, see [`docs/34-in
 
 ### Tech stack (authoritative detail)
 
-Binding list lives in [`docs/pre-prompt.md`](docs/pre-prompt.md) (stack section). In short: Python 3.13, FastAPI, SQLAlchemy 2 + asyncpg, Pydantic v2, Redis, Celery 5, PostgreSQL 16 + pgvector, Next.js 16 + React 19 + Mantine 9 in a workspace layout.
+Binding list lives in [`docs/pre-prompt.md`](docs/pre-prompt.md) (stack section). In short: Python 3.13, FastAPI, SQLAlchemy 2 + asyncpg, Pydantic v2, Redis, Celery 5, PostgreSQL 16 + pgvector, Next.js 16 + React 19 + Mantine 9.
+
+**Monorepo (npm workspaces):** `admin-ui` and `portal-ui` only. Cross-cutting widgets and AI surfaces (`PromptInput`, `AIDashboard`, shared form widgets) live under **`admin-ui/src/orbiteus-ui/`**. When the portal needs the same UX, copy the relevant files into `portal-ui` (two deployable apps, no separate `packages/*` workspace).
 
 ### Module layout
 
@@ -169,6 +171,7 @@ Details: [`docs/20-testing.md`](docs/20-testing.md) and `.github/workflows/ci.ym
 | Auth | [`docs/06-auth.md`](docs/06-auth.md) |
 | Auto-CRUD API + webhooks | [`docs/07-api.md`](docs/07-api.md) |
 | Admin UI | [`docs/08-admin-ui.md`](docs/08-admin-ui.md) |
+| Design system (Mantine + `orbiteus-ui`) | [`docs/10-design-system.md`](docs/10-design-system.md) |
 | Portal UI | [`docs/09-portal-ui.md`](docs/09-portal-ui.md) |
 | Realtime | [`docs/11-realtime.md`](docs/11-realtime.md) |
 | Events + queues | [`docs/12-events-and-queues.md`](docs/12-events-and-queues.md) |
