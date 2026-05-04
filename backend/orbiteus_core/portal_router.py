@@ -106,8 +106,91 @@ async def exchange(
         "resource_model": payload.resource_model,
         "resource_id": str(payload.resource_id),
         "permissions": payload.permissions,
+        # Surface tenant_id so the portal-ui realtime client can build
+        # the canonical `tenant:{tid}:model:{model}:record:{rid}` topic
+        # without an extra round-trip. The id is already inside the
+        # signed token; we are not leaking anything.
+        "tenant_id": str(payload.tenant_id),
         "payload": safe_payload,
     }
+
+
+# ---------------------------------------------------------------------------
+# Portal-scoped realtime (DoD §12.6) — share-token authenticated SSE.
+# ---------------------------------------------------------------------------
+#
+# The standard `/api/realtime/subscribe` requires a normal `access` JWT
+# with `scope=internal`. Portal users only have a share-link token
+# (`type=portal_share`, `scope=portal`), so we expose a dedicated
+# endpoint that:
+#   1. Decodes + validates the share token (TTL, signature, scope).
+#   2. Asserts the requested topic targets *exactly* the resource the
+#      token grants access to. No "subscribe to a different model in
+#      the same tenant" — the share-token's blast radius is one
+#      record.
+#   3. Forwards into the shared `stream_topics(...)` async generator,
+#      so the same Redis pub/sub backplane drives both admin-ui and
+#      portal-ui clients.
+
+@router.get("/realtime")
+async def portal_realtime(
+    token: str = Query(..., description="Share-link JWT issued by /api/auth/share"),
+    topic: list[str] = Query(default=[], description="Realtime topic(s) to subscribe to"),
+):
+    from fastapi.responses import StreamingResponse
+
+    from orbiteus_core.realtime import (
+        parse_tenant_from_topic,
+        stream_topics,
+    )
+
+    try:
+        share = decode(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not topic:
+        raise HTTPException(status_code=400, detail="At least one ?topic= is required")
+
+    # Allowed shape — the share token grants access to exactly one
+    # resource. We accept either the per-record topic or the per-model
+    # list topic for that tenant.
+    record_topic = (
+        f"tenant:{share.tenant_id}:model:{share.resource_model}"
+        f":record:{share.resource_id}"
+    )
+    list_topic = f"tenant:{share.tenant_id}:model:{share.resource_model}:list"
+    allowed = {record_topic, list_topic}
+    forbidden = [t for t in topic if t not in allowed]
+    if forbidden:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "portal.realtime.topic_forbidden",
+                "topics": forbidden,
+                "allowed": sorted(allowed),
+            },
+        )
+
+    # Defensive: every topic MUST also carry the right tenant prefix.
+    for t in topic:
+        tid = parse_tenant_from_topic(t)
+        if tid is None or tid != str(share.tenant_id):
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "portal.realtime.tenant_mismatch", "topic": t},
+            )
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    }
+    return StreamingResponse(
+        stream_topics(topic),
+        media_type="text/event-stream",
+        headers=headers,
+    )
 
 
 # ---------------------------------------------------------------------------

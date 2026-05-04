@@ -1,18 +1,28 @@
 "use client";
 
-import { Alert, Container, Loader, Paper, Stack, Text, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { Alert, Badge, Container, Group, Loader, Paper, Stack, Text, Title } from "@mantine/core";
+import { useCallback, useEffect, useState } from "react";
+
+import { useRealtimeShareResource } from "@/lib/realtime";
 
 interface ResourceView {
   resource_model: string;
   resource_id: string;
   permissions: string[];
+  /** Surfaced by `/api/portal/exchange` so the realtime hook can build the topic. */
+  tenant_id: string;
   payload: Record<string, unknown>;
 }
 
 export default function ShareLinkPage({ params }: { params: { token: string } }) {
   const [view, setView] = useState<ResourceView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  // "live" badge — flashes on every realtime event so the visitor knows the
+  // page reflects the latest state without a manual reload.
+  const [liveAt, setLiveAt] = useState<number | null>(null);
+
+  const reload = useCallback(() => setRefreshTick((t) => t + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,12 +43,35 @@ export default function ShareLinkPage({ params }: { params: { token: string } })
     return () => {
       cancelled = true;
     };
-  }, [params.token]);
+  }, [params.token, refreshTick]);
+
+  // Subscribe to realtime updates for this resource. When the backend
+  // emits `record.updated`, refetch `/api/portal/exchange` so the page
+  // reflects the new payload without forcing the visitor to reload.
+  useRealtimeShareResource(
+    {
+      shareToken: params.token,
+      tenantId: view?.tenant_id,
+      model: view?.resource_model,
+      recordId: view?.resource_id,
+    },
+    () => {
+      setLiveAt(Date.now());
+      reload();
+    },
+  );
 
   return (
     <Container size="md" py="xl">
       <Stack gap="md">
-        <Title order={2}>Shared resource</Title>
+        <Group justify="space-between">
+          <Title order={2}>Shared resource</Title>
+          {liveAt ? (
+            <Badge color="green" variant="light">
+              live · last update {new Date(liveAt).toLocaleTimeString()}
+            </Badge>
+          ) : null}
+        </Group>
         {error ? <Alert color="red" title="Cannot open the share link">{error}</Alert> : null}
         {!error && !view ? <Loader /> : null}
         {view ? (

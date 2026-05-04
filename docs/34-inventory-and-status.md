@@ -118,9 +118,11 @@
 |---|---|---|
 | App scaffold (Next.js 16 + Mantine 9 + workspaces) | DONE | `portal-ui/` |
 | Production Dockerfile | DONE | `portal-ui/Dockerfile.prod` |
-| Share-link landing `/s/[token]` | DONE | exchanges via `/api/portal/exchange` |
+| Share-link landing `/s/[token]` | DONE | exchanges via `/api/portal/exchange`; subscribes to portal SSE so the page auto-refreshes when the underlying record changes |
 | Backend `POST /api/auth/share` | DONE | `modules/auth/controller/router.py`; portal scope JWT |
-| Backend `GET /api/portal/exchange` | DONE | `orbiteus_core/portal_router.py` |
+| Backend `GET /api/portal/exchange` | DONE | `orbiteus_core/portal_router.py` (now also returns `tenant_id` for the portal realtime topic) |
+| Backend `GET /api/portal/realtime` | DONE | `orbiteus_core/portal_router.py` (share-token-authenticated SSE; refuses topics outside the granted resource); reuses `stream_topics(...)` so admin-ui and portal-ui share the same Redis backplane |
+| Portal realtime client | DONE | `portal-ui/src/lib/realtime.ts` (`useRealtimeShareResource(shareToken, tenantId, model, recordId, onChange)`; exp. backoff reconnect 3s → 30s) |
 | Compose service `portal` | DONE | `docker-compose.prod.yml` |
 | Comments + limited actions surface | NEXT PASS | basic exchange + read works; mutations TBD |
 
