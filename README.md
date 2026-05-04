@@ -34,14 +34,14 @@ You **start with roughly 80% of the plumbing done**. **What you focus on** is de
 
 ## What you can build with Orbiteus
 
-- **Gym chain management** (members, contracts, trainers)
-- **Interior design studio** (projects, suppliers, subcontractors)
-- **Transport management system (TMS)**
-- **Niche CRM SaaS** for any vertical
-- **Warehouse management (WMS)**
-- **Any combination of the above**
+**Any business** — from a one-person shop to a large operator — can use Orbiteus to build **whatever internal or customer-facing application you actually need**. You are not picking from a short menu of verticals; you describe the process, and your AI agent implements it on top of the engine.
 
-The hero line is literal: **80% of the plumbing is already there** — auth, tenants, permissions, audit, APIs, admin UI, jobs, realtime, and **AI agents** calling tools under the same rules as people. You sell the **20%** that is your market: members, loads, studio phases, stock moves — not another hand-rolled session stack or webhook retry loop.
+Examples (illustrative, not a limit):
+
+- **Replace a rent-by-the-seat sales CRM** with one that follows **your** pipeline stages, approvals, and handoffs — not a vendor’s median company.
+- **Replace a legacy WMS** with a modern stock-and-movements system **plus** a **supplier portal** your partners actually log into.
+- **Replace a third-party “collect reviews” SaaS** with your own feedback app **tied to your product and domain data** — same origin, same rules, your data model.
+- **Projects, sales, client communication, operations, finance** in one coherent surface — **you name it**. The stack is already there: **~80% of the plumbing is done** (auth, multi-tenancy, permissions, audit, APIs, admin UI, background jobs, realtime, and **AI agents** calling tools under the **same** rules as people). You add **your** business logic, integrations, and the last mile of UX that makes it yours — not another hand-rolled session stack or webhook-retry science project.
 
 ---
 
