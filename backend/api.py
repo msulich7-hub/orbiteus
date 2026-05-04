@@ -201,7 +201,9 @@ async def _reload_rbac_cache() -> None:
             }
             for r in rule_objs
         ]
-        reload_access_cache(access_rows, rule_rows)
+        # Persists to Redis + bumps version + publishes `rbac.invalidate`
+        # so other replicas refresh their L1 cache.
+        await reload_access_cache(access_rows, rule_rows)
 
 
 def _seed_auto_actions() -> None:
@@ -328,7 +330,16 @@ async def lifespan(app: FastAPI):
     await registry.seed_security_to_db()
     await registry.seed_views_to_db()
     await _bootstrap_modules()
+    # Pull RBAC matrix from DB and push to Redis (+ publish invalidate so
+    # other replicas refresh their L1).
     await _reload_rbac_cache()
+    # Wire EventBus → RBAC reload bridge so any future mutation of
+    # ir_model_access / ir_rules in any replica fans out invalidation.
+    from orbiteus_core.security.rbac import register_rbac_invalidator, start_invalidator
+    register_rbac_invalidator()
+    # Background pub/sub listener — refreshes L1 cache cross-replica
+    # within ~50ms of any rbac.invalidate notification.
+    await start_invalidator()
     # Auto-register CRUD actions in the Command Palette for every model
     # exposed by the registry. Module-curated actions in `actions.py` win
     # on id collisions; everything else gets a generic
@@ -336,6 +347,9 @@ async def lifespan(app: FastAPI):
     _seed_auto_actions()
     logger.info("Startup complete — RBAC cache loaded.")
     yield
+    # Cleanly stop the background pub/sub listener so we don't leak a task.
+    from orbiteus_core.security.rbac import stop_invalidator
+    await stop_invalidator()
     logger.info("Shutting down.")
 
 

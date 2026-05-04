@@ -22,7 +22,7 @@
 | BaseRepository (tenant filter, RBAC, soft delete, hooks, audit, attribution) | DONE | `repository.py` | extended in PR 3 |
 | AutoRouter (5 CRUD endpoints) | DONE | `auto_router.py` | — |
 | ui-config builder | DONE | `ui_config.py` | needs `relation` for many2one |
-| RBAC: `ir_model_access` + `ir_rule` cache | PARTIAL | `security/rbac.py` | Redis cache abstraction available (PR 6); RBAC migration to Redis remaining |
+| RBAC: `ir_model_access` + `ir_rule` cache | DONE | `security/rbac.py` (Redis L2 + L1 mirror, pub/sub `rbac.invalidate` cross-replica, EventBus auto-reload on `ir_model_access`/`ir_rules` mutations) | tested by `tests/test_rbac_redis.py` (7 cases: Redis persistence, version bump, refresh, closed-fail, superadmin bypass, per-role, pub/sub invalidate <1s) |
 | JWT + bcrypt | DONE | `security/{tokens,passwords,jti,rate_limit}.py` | 15min/7d, jti revocation list, refresh rotation in `/api/auth/refresh` |
 | **httpOnly cookie session (Admin UI)** | DONE | `security/cookies.py`, `security/middleware.py` (cookie fallback), `modules/auth/controller/router.py`, `admin-ui/src/proxy.ts` | ADR-0017; eliminates FOAC at the Edge |
 | **Default tenant + bootstrap admin binding** | DONE | `backend/api.py` (`_seed_default_tenant`, `_seed_superadmin` backfill) | `BOOTSTRAP_ADMIN_TENANT_NAME/SLUG`; backfills legacy `tenant_id IS NULL` admins |
