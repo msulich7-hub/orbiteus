@@ -60,7 +60,7 @@ CREATE TABLE ir_ai_credential (
 );
 ```
 
-- Encryption key (`AI_SECRET_KEY`) lives in env, never in DB.
+- Encryption key (`AI_SECRET_KEY`) lives in env, never in DB. It must be a **valid Fernet key** (e.g. output of `Fernet.generate_key().decode()`). Development placeholders that are not valid Fernet material are **rejected** at runtime with a clear error — not passed through to `cryptography` as-is.
 - API:
   - `POST /api/ai/credentials { provider, secret, model_default }` — store + ping
   - `GET /api/ai/credentials` — list (without secrets)
