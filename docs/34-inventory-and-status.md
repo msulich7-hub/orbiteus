@@ -61,11 +61,11 @@
 | **Prometheus `/metrics`** | DONE | `orbiteus_core/observability/metrics.py` | series expanded in PR 13 |
 | **JSON logging + request_id** | DONE | `orbiteus_core/observability/{logging,middleware}.py` | tenant_id/user_id ctx wired in PR 6 |
 | **Alembic advisory lock helper** | DONE | `orbiteus_core/alembic_lock.py` | applied in next migration |
-| **AI providers (Anthropic/OpenAI/Ollama)** | DONE | `orbiteus_core/ai/providers/{base,anthropic,openai,ollama}.py` | provider ABC + ping/chat/embed |
+| **AI providers (Anthropic/OpenAI/Ollama)** | DONE | `orbiteus_core/ai/providers/{base,anthropic,openai,ollama}.py` (Provider ABC: `ping`/`chat`/`chat_stream`/`embed`; default `chat_stream` falls back to `chat()`; Anthropic native streaming via `messages.stream(...)`) | tested by `tests/test_ai_streaming.py` |
 | **`ir_ai_credential` (BYOK)** | DONE | table + Fernet at-rest + `ai/keys.py` + `POST/GET/DELETE /api/ai/credentials` | unique (tenant, provider) |
 | **`AIModuleConfig` registry + `ai.py`** | DONE | `orbiteus_core/ai/config.py` (AIRegistry singleton) | per-module declarative AI surface |
 | **pgvector + `ir_embedding`** | DONE | extension + `ir_embeddings` table with `vector(1536)` + HNSW index | embedding refresh via Outbox in next pass |
-| **`/api/ai/chat`, `/dashboard`** | DONE | non-streaming chat with tool calling + budget guard + redaction; dashboard endpoint scaffolded | streaming + AI dashboard exec in PR 11 |
+| **`/api/ai/chat`, `/dashboard`** | DONE | `POST /api/ai/chat` (non-streaming JSON or `?stream=1` SSE with `event: text/tool_call/done/error`) + tool calling + budget guard + PII redaction + tool_call audit; `/dashboard` scaffolded | tested by `tests/test_ai_streaming.py` (default fallback, native streaming, dispatch on `?stream=1`) |
 | **Field-level RBAC** | MISSING | — | post-v1.0 |
 | **Multi-company switch endpoint** | MISSING | — | post-v1.0 |
 | **PDF reports** | MISSING | — | post-v1.0 |

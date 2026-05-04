@@ -151,18 +151,19 @@ async def delete_credential(
 
 
 # ---------------------------------------------------------------------------
-# Chat (non-streaming MVP — streaming variant planned for PR 11)
+# Chat — non-streaming + streaming (DoD §8.8)
 # ---------------------------------------------------------------------------
 
-@router.post("/chat")
-async def chat(
-    body: dict = Body(...),
-    session: AsyncSession = Depends(get_session),
-    ctx: RequestContext = Depends(require_auth),
-) -> dict:
-    """One-shot chat with the tenant's configured provider.
+async def _resolve_chat_inputs(
+    body: dict,
+    session: AsyncSession,
+    ctx: RequestContext,
+) -> tuple[Any, dict, list, list, str]:
+    """Shared validation for both chat endpoints.
 
-    Body: `{ "messages": [...], "scope": "module:crm" | "global", "model": optional }`
+    Returns ``(provider, credential, messages, tools, provider_name)``.
+    Raises ``HTTPException`` on missing tenant, missing credential, or
+    exhausted budget — same shape both endpoints used to encode inline.
     """
     if ctx.tenant_id is None:
         raise HTTPException(status_code=400, detail="tenant context required")
@@ -186,11 +187,81 @@ async def chat(
             headers={"Retry-After": "3600"},
         )
 
-    # PII redaction before remote call.
     messages = redact_payload(body.get("messages") or [])
     tools = build_tools(ctx, scope=body.get("scope") or "all")
-
     p = get_provider(provider_name)
+    return p, cred, messages, tools, provider_name
+
+
+async def _audit_tool_calls(
+    session: AsyncSession,
+    ctx: RequestContext,
+    tool_calls: list[dict[str, Any]],
+    *,
+    provider_name: str,
+    body: dict,
+    cred: dict,
+    usage_tokens: int,
+) -> None:
+    """Append one `actor=ai, operation=tool_call` row per invocation."""
+    if not tool_calls:
+        return
+    from orbiteus_core.audit import write_audit
+
+    for tool_call in tool_calls:
+        await write_audit(
+            session,
+            actor="ai",
+            operation="tool_call",
+            model="ai.tool",
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            diff={
+                "name": tool_call.get("name"),
+                "arguments": tool_call.get("arguments"),
+                "tool_call_id": tool_call.get("id"),
+            },
+            metadata={
+                "provider": provider_name,
+                "ai_model": body.get("model") or cred.get("model_default"),
+                "scope": body.get("scope") or "all",
+                "usage_tokens": usage_tokens,
+            },
+        )
+    await session.commit()
+
+
+@router.post("/chat")
+async def chat(
+    body: dict = Body(...),
+    stream: int = Query(0, description="Pass 1 for SSE streaming response"),
+    session: AsyncSession = Depends(get_session),
+    ctx: RequestContext = Depends(require_auth),
+) -> Any:
+    """Chat with the tenant's configured provider.
+
+    Body: `{ "messages": [...], "scope": "module:crm" | "global", "model": optional }`
+
+    With ``?stream=1`` the response is `text/event-stream` (SSE):
+
+      event: text          → {"delta": "..."}
+      event: tool_call     → {"id": ..., "name": ..., "arguments": {...}}
+      event: done          → {"usage_tokens": int, "finish_reason": "..."}
+
+    Otherwise it's a regular JSON response — see schema below.
+    """
+    if stream:
+        return await _chat_stream(body, session, ctx)
+    return await _chat_oneshot(body, session, ctx)
+
+
+async def _chat_oneshot(
+    body: dict,
+    session: AsyncSession,
+    ctx: RequestContext,
+) -> dict:
+    """Original non-streaming chat. Body is the same as `/chat`."""
+    p, cred, messages, tools, provider_name = await _resolve_chat_inputs(body, session, ctx)
     try:
         result = await p.chat(
             cred["secret"],
@@ -204,37 +275,11 @@ async def chat(
     if result.usage_tokens:
         await increment(ctx.tenant_id, result.usage_tokens)
 
-    # Audit every tool call the model invoked (DoD §4.3 — `actor=ai`).
-    # Tool arguments may carry the user's free-text prompt fragments,
-    # so we rely on `redact_payload` (via `write_audit(redact=True)`)
-    # to scrub passwords/secrets/PII before persisting.
-    if result.tool_calls:
-        from orbiteus_core.audit import write_audit
-
-        for tool_call in result.tool_calls:
-            tool_name = tool_call.get("name") if isinstance(tool_call, dict) else None
-            tool_args = tool_call.get("arguments") if isinstance(tool_call, dict) else None
-            tool_id = tool_call.get("id") if isinstance(tool_call, dict) else None
-            await write_audit(
-                session,
-                actor="ai",
-                operation="tool_call",
-                model="ai.tool",
-                tenant_id=ctx.tenant_id,
-                user_id=ctx.user_id,
-                diff={
-                    "name": tool_name,
-                    "arguments": tool_args,
-                    "tool_call_id": tool_id,
-                },
-                metadata={
-                    "provider": provider_name,
-                    "ai_model": body.get("model") or cred.get("model_default"),
-                    "scope": body.get("scope") or "all",
-                    "usage_tokens": result.usage_tokens,
-                },
-            )
-        await session.commit()
+    await _audit_tool_calls(
+        session, ctx, result.tool_calls,
+        provider_name=provider_name, body=body, cred=cred,
+        usage_tokens=result.usage_tokens,
+    )
 
     return {
         "text": result.text,
@@ -242,6 +287,71 @@ async def chat(
         "usage_tokens": result.usage_tokens,
         "finish_reason": result.finish_reason,
     }
+
+
+async def _chat_stream(
+    body: dict,
+    session: AsyncSession,
+    ctx: RequestContext,
+):
+    """Streaming variant — returns a `text/event-stream` `StreamingResponse`."""
+    import json as _json
+
+    from fastapi.responses import StreamingResponse
+
+    p, cred, messages, tools, provider_name = await _resolve_chat_inputs(body, session, ctx)
+
+    async def _sse() -> Any:
+        accumulated_tool_calls: list[dict[str, Any]] = []
+        usage_tokens = 0
+        finish_reason = "stop"
+        try:
+            async for event in p.chat_stream(
+                cred["secret"],
+                messages=messages,
+                tools=tools,
+                model=body.get("model") or cred.get("model_default"),
+            ):
+                yield (
+                    f"event: {event.kind}\n"
+                    f"data: {_json.dumps(event.data)}\n\n"
+                ).encode("utf-8")
+
+                if event.kind == "tool_call":
+                    accumulated_tool_calls.append(event.data)
+                elif event.kind == "done":
+                    usage_tokens = int(event.data.get("usage_tokens", 0) or 0)
+                    finish_reason = str(event.data.get("finish_reason") or "stop")
+        except ProviderError as exc:
+            yield (
+                "event: error\n"
+                f"data: {_json.dumps({'detail': str(exc)})}\n\n"
+            ).encode("utf-8")
+            return
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("ai.chat_stream.failed")
+            yield (
+                "event: error\n"
+                f"data: {_json.dumps({'detail': 'internal error', 'kind': type(exc).__name__})}\n\n"
+            ).encode("utf-8")
+            return
+
+        # After the SSE stream finishes, persist usage + audit.
+        if usage_tokens:
+            try:
+                await increment(ctx.tenant_id, usage_tokens)
+            except Exception:  # noqa: BLE001
+                logger.exception("ai.chat_stream.budget_increment_failed")
+        try:
+            await _audit_tool_calls(
+                session, ctx, accumulated_tool_calls,
+                provider_name=provider_name, body=body, cred=cred,
+                usage_tokens=usage_tokens,
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("ai.chat_stream.audit_failed")
+
+    return StreamingResponse(_sse(), media_type="text/event-stream")
 
 
 # ---------------------------------------------------------------------------

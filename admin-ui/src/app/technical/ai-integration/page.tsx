@@ -16,10 +16,10 @@
  * leave the backend after upsert — the API key input is write-only;
  * `GET /api/ai/credentials` returns metadata only.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert, Badge, Button, Code, Group, Loader, NumberInput, Paper,
-  PasswordInput, Select, Stack, Table, Text, Textarea, TextInput,
+  PasswordInput, Select, Stack, Switch, Table, Text, Textarea, TextInput,
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -153,6 +153,117 @@ export default function AiIntegrationPage() {
     }
   }
 
+  // ---- Streaming SSE consumer (POST /api/ai/chat?stream=1) ----
+  //
+  // EventSource doesn't support POST so we use `fetch` + a manual reader.
+  // The body is the same as the non-streaming path; the response is
+  // `text/event-stream` with three event kinds:
+  //
+  //   event: text          -> {"delta": "..."}
+  //   event: tool_call     -> {"id":..., "name":..., "arguments":{...}}
+  //   event: done          -> {"usage_tokens":..., "finish_reason":"..."}
+  //   event: error         -> {"detail": "..."}
+  //
+  async function runStreamingTest(): Promise<void> {
+    // Cancel any previous run.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setTestResult({ text: "", usage_tokens: 0 });
+
+    const resp = await fetch("/api/ai/chat?stream=1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      signal: controller.signal,
+      body: JSON.stringify({
+        provider: testProvider,
+        messages: [{ role: "user", content: testPrompt }],
+      }),
+    });
+
+    if (!resp.ok) {
+      // Non-2xx — peek the JSON detail and treat like the non-streaming path.
+      let detail: unknown = "";
+      try {
+        const bodyText = await resp.text();
+        try { detail = (JSON.parse(bodyText) as { detail?: unknown }).detail; }
+        catch { detail = bodyText; }
+      } catch { /* ignore */ }
+      const err = new Error(typeof detail === "string" ? detail : "stream error");
+      // Mimic the axios error shape so the catch block downstream renders nicely.
+      (err as unknown as { response: { status: number; data: { detail: unknown } } }).response = {
+        status: resp.status,
+        data: { detail: detail || err.message },
+      };
+      throw err;
+    }
+    if (!resp.body) {
+      throw new Error("Streaming response has no body");
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffered = "";
+    let accumulatedText = "";
+    let usageTokens = 0;
+    let finishReason = "";
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffered += decoder.decode(value, { stream: true });
+
+        // SSE messages are separated by a blank line.
+        let sep: number;
+        while ((sep = buffered.indexOf("\n\n")) !== -1) {
+          const raw = buffered.slice(0, sep);
+          buffered = buffered.slice(sep + 2);
+          let evName = "message";
+          let evData = "";
+          for (const line of raw.split("\n")) {
+            if (line.startsWith("event:")) evName = line.slice(6).trim();
+            else if (line.startsWith("data:")) evData += line.slice(5).trim();
+          }
+          if (!evData) continue;
+          let parsed: Record<string, unknown> = {};
+          try { parsed = JSON.parse(evData) as Record<string, unknown>; }
+          catch { /* tolerate non-JSON keepalive */ continue; }
+
+          if (evName === "text") {
+            const delta = String(parsed.delta ?? "");
+            accumulatedText += delta;
+            setTestResult({
+              text: accumulatedText, usage_tokens: usageTokens,
+              finish_reason: finishReason || undefined,
+            });
+          } else if (evName === "tool_call") {
+            // Append a small marker so the operator sees tool calls
+            // without us shipping a dedicated tool-call list yet.
+            accumulatedText += `\n\n[tool_call] ${String(parsed.name ?? "")}`;
+            setTestResult({
+              text: accumulatedText, usage_tokens: usageTokens,
+              finish_reason: finishReason || undefined,
+            });
+          } else if (evName === "done") {
+            usageTokens = Number(parsed.usage_tokens ?? 0);
+            finishReason = String(parsed.finish_reason ?? "stop");
+            setTestResult({
+              text: accumulatedText, usage_tokens: usageTokens,
+              finish_reason: finishReason || undefined,
+            });
+          } else if (evName === "error") {
+            throw new Error(String(parsed.detail ?? "stream error"));
+          }
+        }
+      }
+    } finally {
+      try { reader.releaseLock(); } catch { /* noop */ }
+    }
+  }
+
   // ---- Test query ----
   const [testProvider, setTestProvider] = useState<CredentialRow["provider"]>("anthropic");
   const [testPrompt, setTestPrompt] = useState(
@@ -161,17 +272,24 @@ export default function AiIntegrationPage() {
   const [testRunning, setTestRunning] = useState(false);
   const [testResult, setTestResult] = useState<ChatResponse | null>(null);
   const [testError, setTestError] = useState("");
+  // DoD §8.8 — opt-in SSE streaming consumer.
+  const [testStream, setTestStream] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function onTest() {
     setTestError("");
     setTestResult(null);
     setTestRunning(true);
     try {
-      const { data } = await api.post<ChatResponse>("/ai/chat", {
-        provider: testProvider,
-        messages: [{ role: "user", content: testPrompt }],
-      }, { skipGlobalErrorToast: true });
-      setTestResult(data);
+      if (testStream) {
+        await runStreamingTest();
+      } else {
+        const { data } = await api.post<ChatResponse>("/ai/chat", {
+          provider: testProvider,
+          messages: [{ role: "user", content: testPrompt }],
+        }, { skipGlobalErrorToast: true });
+        setTestResult(data);
+      }
     } catch (err: unknown) {
       const e = err as { response?: { status?: number; data?: { detail?: unknown } } };
       const detail = e.response?.data?.detail;
@@ -406,7 +524,13 @@ export default function AiIntegrationPage() {
             maxRows={6}
           />
 
-          <Group justify="flex-end">
+          <Group justify="space-between" align="center">
+            <Switch
+              label="Stream response (SSE)"
+              description="Use POST /api/ai/chat?stream=1 — text fragments arrive incrementally."
+              checked={testStream}
+              onChange={(e) => setTestStream(e.currentTarget.checked)}
+            />
             <Button
               loading={testRunning}
               leftSection={<IconSend size={16} />}
