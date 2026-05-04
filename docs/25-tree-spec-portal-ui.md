@@ -6,7 +6,7 @@
 ## 1. App scaffolding
 
 - [x] 1.1 Create `portal-ui/` Next.js 16 app
-- [ ] 1.2 npm workspace entry + import `@orbiteus/ui` shared widgets
+- [ ] 1.2 Copy shared widgets from `admin-ui/src/orbiteus-ui` when portal needs them
 - [ ] 1.3 Tailored layout: no module sidebar, focused on shared resource
 - [ ] 1.4 `next.config.js` `/api/portal/*` proxy
 - [ ] 1.5 Strict CSP and `frame-ancestors 'none'` (no embedding)

@@ -74,11 +74,12 @@ See ADRs `0011`, `0012`, `0013`, `0014`, `0015` for the full reasoning.
 |---|---|
 | Framework | Next.js 16 App Router (React 19) |
 | Design system | Mantine 9 |
-| Shared widgets | `packages/ui` (npm workspace) |
+| Shared widgets / AI | `admin-ui/src/orbiteus-ui/` (copy to portal-ui when needed) |
 | State | Component-local + axios + ui-config cache |
 | Charts | Recharts 3 |
 
-`admin-ui` and `portal-ui` are independent Next.js apps that share `packages/ui`.
+`admin-ui` and `portal-ui` are independent Next.js apps; cross-cutting widgets
+and AI surfaces ship from `admin-ui/src/orbiteus-ui/` until the portal copies them.
 
 ## Multi-tenancy
 

@@ -14,7 +14,9 @@ versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Reserved for changes accepted into `main` after `v1.0.0-rc1` ships.
+- **Admin UI:** former `@orbiteus/ui` workspace inlined as `admin-ui/src/orbiteus-ui/`
+  (widgets + AI). Root npm workspaces are `admin-ui` and `portal-ui` only; portal
+  copies components when it needs parity. ADR-0016 superseded.
 
 ## [1.0.0-rc1] — 2026-05-04 (release candidate)
 

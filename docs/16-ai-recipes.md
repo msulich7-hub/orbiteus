@@ -31,7 +31,7 @@ change.
 In any module-aware page (or the auto-renderer's form view):
 
 ```tsx
-import { PromptInput } from "@orbiteus/ui";
+import { PromptInput } from "@/orbiteus-ui";
 
 <PromptInput
   scope="module:hr"
@@ -74,7 +74,7 @@ underlying endpoint; AI never bypasses RBAC.
 Front-end:
 
 ```tsx
-import { AIChatPanel } from "@orbiteus/ui";
+import { AIChatPanel } from "@/orbiteus-ui";
 
 <AIChatPanel
   scope="record"
@@ -88,7 +88,7 @@ The panel scopes embeddings + tools to the single record by default.
 ## Recipe 5 — Dynamic dashboard
 
 ```tsx
-import { AIDashboard } from "@orbiteus/ui";
+import { AIDashboard } from "@/orbiteus-ui";
 
 <AIDashboard
   scope="module:crm"

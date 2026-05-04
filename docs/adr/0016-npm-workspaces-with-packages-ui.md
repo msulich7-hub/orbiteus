@@ -1,37 +1,31 @@
-# ADR-0016: npm workspaces with `packages/ui`
+# ADR-0016: npm workspaces with `packages/ui` (superseded)
 
-- **Status:** Accepted
+- **Status:** Superseded (2026-05-04)
 - **Date:** 2026-05-03
 - **Context tags:** frontend, monorepo
 
-## Context
+## Original decision
 
-`admin-ui` and `portal-ui` need to share widgets, AI components, and branding
-helpers. Publishing a separate npm package (`@orbiteus/ui`) is overkill at
-this stage and slows iteration.
+`admin-ui` and `portal-ui` shared widgets and AI components via an npm workspace
+`packages/ui` published in-repo as `@orbiteus/ui`.
 
-## Decision
+## Superseding change
 
-Use **npm workspaces** with a `packages/ui` workspace. Apps consume it as
-`"@orbiteus/ui": "*"` in their `package.json`. No external publishing for now.
+The workspace package was **removed**. Shared React code now lives under
+`admin-ui/src/orbiteus-ui/` (widgets + AI). `portal-ui` is a separate app with
+no npm link to that tree; when the portal needs the same components, **copy**
+the relevant files there (explicit duplication over a hidden shared package).
 
-Optional Turborepo / Nx caching can be layered later; not required.
+Root `package.json` workspaces are only `admin-ui` and `portal-ui`.
 
-## Consequences
+## Consequences (current)
 
-- Single `npm install` at the repo root.
-- Refactors across packages happen in one PR.
-- Faster builds, fewer version drifts.
-- Slight risk of dependency hoisting mismatches; mitigated by `nohoist` if
-  needed.
-
-## Alternatives considered
-
-- Separate published package — more friction, slower iteration; rejected.
-- pnpm workspaces — strictly better in some ways but adds a new tool; npm
-  workspaces are universal in 2026; revisit if performance matters.
+- Docker build context still uses the monorepo root for `npm install`, but no
+  longer copies a `packages/` tree.
+- Fewer moving parts for contributors who think in “backend / admin / portal”
+  only.
 
 ## References
 
+- `admin-ui/src/orbiteus-ui/`
 - `docs/10-design-system.md`
-- `docs/16-ai-recipes.md`

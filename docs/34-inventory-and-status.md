@@ -107,11 +107,11 @@
 | **Badge widget** | PARTIAL | `widgets/StatusBadge.tsx` | not wired to lists |
 | **Monetary widget** | DONE | `components/widgets/MonetaryField.tsx` (`MonetaryCell` for list cells, `MonetaryInput` for form input; reads `currency_code` from ui-config FieldMeta, falls back to `PLN`); backend serves `currency_code` in `/api/base/ui-config` for every `monetary` field | tested by `components/widgets/MonetaryField.test.tsx` (7 cases) |
 | **Statusbar widget** | PARTIAL | `widgets/StatusbarField.tsx` | not wired to lead.stage |
-| **`packages/ui` workspace** | DONE | npm workspaces + `packages/ui` consumed by admin-ui | PR 10 |
-| **`<PromptInput>`** | DONE | `packages/ui/src/ai/PromptInput.tsx` + `useAIContext` hook | PR 10 |
-| **`<AIChatPanel>`** | DONE | `packages/ui/src/ai/AIChatPanel.tsx` (Drawer) | PR 10 |
-| **`<AIDashboard>`** | DONE | `packages/ui/src/ai/AIDashboard.tsx` (recharts BarChart) | PR 10 |
-| **Shared widgets** | DONE | Badge, Monetary, Statusbar, Many2OneSelect, TagsField in `packages/ui/src/widgets/` | PR 10 |
+| **`orbiteus-ui` (admin)** | DONE | `admin-ui/src/orbiteus-ui/` — widgets + AI; portal copies when needed | ADR-0016 superseded |
+| **`<PromptInput>`** | DONE | `admin-ui/src/orbiteus-ui/ai/PromptInput.tsx` + `useAIContext` hook | PR 10 |
+| **`<AIChatPanel>`** | DONE | `admin-ui/src/orbiteus-ui/ai/AIChatPanel.tsx` (Drawer) | PR 10 |
+| **`<AIDashboard>`** | DONE | `admin-ui/src/orbiteus-ui/ai/AIDashboard.tsx` (recharts BarChart) | PR 10 |
+| **Shared widgets** | DONE | Badge, Monetary, Statusbar, Many2OneSelect, TagsField in `admin-ui/src/orbiteus-ui/widgets/` | PR 10 |
 | **Toasts (success/error/403/404)** | PARTIAL | scattered | unify in `lib/api.ts` |
 | **Empty states + loading skeletons** | DONE | `components/EmptyState.tsx` (icon + title + dimmed copy + optional CTA), `components/SkeletonRows.tsx` (table skeleton with configurable columns/rows + trailing actions); wired into `ResourceList`, `ResourceKanban`, `ResourceCalendar`, `ResourceGraph` (all show skeletons while loading + EmptyState when no data, with search-aware copy on lists) | covered by build typecheck on touched files |
 | **Polish strings** | LEAK | several files | EN-only cleanup |
@@ -181,7 +181,7 @@ v1.0 (a few were consciously deferred — see notes).
 | 7 | Cache and rate limiting                              |  3 / 3       | Redis everywhere, 429 + Retry-After, tenant+user+IP buckets tested |
 | 8 | AI layer is plug-and-play (BYOK)                     | 11 / 11      | AI tool dispatcher (`orbiteus_core/ai/dispatcher.py`) routes provider tool_calls to module-registered handlers; CRM registers `crm.lead.move_stage` → `move_lead_to_stage(...)` service; chat layer records `actor=ai, operation=tool_call` audit + executes the handler under the caller's RBAC; tested by `tests/test_ai_move_lead.py` (4 unit + 1 integration). |
 | 9 | Admin UI is a renderer (zero TSX per module)         |  8 / 9       | one technical page (`/technical/audit-log`) keeps a hand-written view because audit-log filtering needs a non-generic UI; not a regression on the generic models |
-| 10| AI components in admin UI                            |  5 / 5       | `<AIDashboard>` (`packages/ui/src/ai/AIDashboard.tsx`) closes the loop: prompt → AI provider returns `{model, group_by, op, measure, title}` JSON → backend re-runs the aggregate via the same RBAC + tenant-filter path → recharts BarChart with a "what-was-aggregated" pill row underneath. |
+| 10| AI components in admin UI                            |  5 / 5       | `<AIDashboard>` (`admin-ui/src/orbiteus-ui/ai/AIDashboard.tsx`) closes the loop: prompt → AI provider returns `{model, group_by, op, measure, title}` JSON → backend re-runs the aggregate via the same RBAC + tenant-filter path → recharts BarChart with a "what-was-aggregated" pill row underneath. |
 | 11| Canonical CRM (sample module)                        |  7 / 7       | Person / Lead / Stage / Team, bootstrap, actions, ai.py, list+kanban+calendar+form, realtime kanban |
 | 12| Portal UI (external partner)                         |  7 / 7       | scaffold, share, exchange, `<portal>` declaration, mutations gated, realtime, negative tests |
 | 13| Observability + ops                                  |  5 / 5       | JSON logs, expanded `/metrics` (14 series families), OTel opt-in, S3-capable backups, restore drill executed |

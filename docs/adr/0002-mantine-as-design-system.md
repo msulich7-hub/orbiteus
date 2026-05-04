@@ -12,8 +12,9 @@ systems in one codebase is a maintenance nightmare.
 
 ## Decision
 
-Mantine is the **only** design system used by `admin-ui`, `portal-ui`, and
-the shared `packages/ui` workspace. No shadcn/ui, MUI, Chakra, Ant Design, or
+Mantine is the **only** design system used by `admin-ui` and `portal-ui`.
+Cross-cutting widgets live in `admin-ui/src/orbiteus-ui/` (copy to portal-ui
+when needed). No shadcn/ui, MUI, Chakra, Ant Design, or
 raw Tailwind is allowed without a superseding ADR.
 
 ## Version policy
@@ -22,7 +23,7 @@ This ADR locks the *choice of Mantine*, **not** a specific major version.
 Rolling Mantine forward (e.g. 8 → 9 → 10) is a routine maintenance task and
 does **not** require a new ADR; it requires:
 
-- Bumping `@mantine/*` peers in `packages/ui/package.json` and the apps.
+- Bumping `@mantine/*` peers in `admin-ui/package.json` and `portal-ui/package.json`.
 - Running the migration codemod when Mantine ships one.
 - Adjusting `theme.ts` if breaking changes touch tokens.
 - Updating `docs/10-design-system.md`, `docs/02-architecture.md`,
@@ -32,7 +33,7 @@ A new ADR (superseding this one) is only needed if the team proposes
 *replacing* Mantine with another design system, or *adding* a second one.
 
 The repository is currently on **Mantine 9** (manifests:
-`admin-ui/package.json`, `portal-ui/package.json`, `packages/ui/package.json`).
+`admin-ui/package.json`, `portal-ui/package.json`).
 
 ## Consequences
 

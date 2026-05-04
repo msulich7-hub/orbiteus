@@ -7,7 +7,7 @@
 > **Canonical sources:**
 > - `docs/08-admin-ui.md` — design + dynamic renderer
 > - `docs/24-tree-spec-admin-ui.md` — implementation tree-spec
-> - `docs/10-design-system.md` — Mantine 9 + `packages/ui`
+> - `docs/10-design-system.md` — Mantine 9 + `src/orbiteus-ui/`
 > - `docs/adr/0017-httponly-cookie-session.md` — auth transport
 
 > **Status:** IMPLEMENTED at v1.0
@@ -29,6 +29,9 @@ TSX files.
 ```
 admin-ui/src/
 ├── proxy.ts                       # Next 16 Edge gate (httpOnly cookie)
+├── orbiteus-ui/                   # Cross-cutting widgets + AI surfaces
+│   ├── ai/
+│   └── widgets/
 ├── app/
 │   ├── api/
 │   │   └── [[...path]]/route.ts   # Server proxy → FastAPI (forwards Set-Cookie)

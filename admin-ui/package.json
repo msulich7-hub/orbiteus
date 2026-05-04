@@ -23,7 +23,6 @@
     "@mantine/dates": "^9.1.1",
     "@mantine/hooks": "^9.1.1",
     "@mantine/notifications": "^9.1.1",
-    "@orbiteus/ui": "*",
     "@tabler/icons-react": "^3.41.0",
     "axios": "^1.7.0",
     "dayjs": "^1.11.19",

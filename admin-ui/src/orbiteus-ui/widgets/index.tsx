@@ -1,4 +1,4 @@
-/** Shared widgets exposed to admin-ui and portal-ui. */
+/** Widgets co-located with admin-ui (copy to portal-ui when needed). */
 export { Badge } from "./Badge";
 export { Monetary } from "./Monetary";
 export { Statusbar } from "./Statusbar";

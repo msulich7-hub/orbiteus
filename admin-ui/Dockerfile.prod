@@ -2,16 +2,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build context is monorepo root → workspaces resolve `@orbiteus/ui` (ADR-0016).
+# Build context is monorepo root (npm workspaces: admin-ui + portal-ui).
 COPY package.json package-lock.json ./
 COPY admin-ui/package.json ./admin-ui/
 COPY portal-ui/package.json ./portal-ui/
-COPY packages ./packages
 
 RUN npm install --include=dev
 
 COPY admin-ui ./admin-ui
-COPY packages ./packages
 
 ARG BACKEND_URL=http://backend:8000
 ARG NEXT_PUBLIC_DEMO_LOGIN_EMAIL=

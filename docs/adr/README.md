@@ -27,5 +27,5 @@ Use the structure in [`_template.md`](./_template.md) for new ADRs.
 | 0013 | [Celery 5 instead of arq / dramatiq / RQ](./0013-celery-instead-of-arq.md) | Accepted |
 | 0014 | [Redis Pub/Sub as realtime backplane](./0014-redis-pubsub-as-realtime-backplane.md) | Accepted |
 | 0015 | [No Temporal in MVP](./0015-no-temporal-in-mvp.md) | Accepted |
-| 0016 | [npm workspaces with packages/ui](./0016-npm-workspaces-with-packages-ui.md) | Accepted |
+| 0016 | [npm workspaces with packages/ui](./0016-npm-workspaces-with-packages-ui.md) | Superseded |
 | 0017 | [httpOnly cookie session for the Admin UI (no FOAC)](./0017-httponly-cookie-session.md) | Accepted |

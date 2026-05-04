@@ -4,8 +4,7 @@
   "license": "MIT",
   "workspaces": [
     "admin-ui",
-    "portal-ui",
-    "packages/*"
+    "portal-ui"
   ],
   "scripts": {
     "build": "npm run build --workspace admin-ui",

@@ -6,12 +6,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY admin-ui/package.json ./admin-ui/
 COPY portal-ui/package.json ./portal-ui/
-COPY packages ./packages
 
 RUN npm install --include=dev
 
 COPY portal-ui ./portal-ui
-COPY packages ./packages
 
 ARG BACKEND_URL=http://backend:8000
 ENV BACKEND_URL=${BACKEND_URL}

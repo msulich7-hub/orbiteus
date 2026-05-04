@@ -34,7 +34,7 @@
 - [ ] tags (TagsInput)
 - [ ] readonly attribute enforcement
 - [ ] date display formatter in list views
-- [ ] Widget registry exported from `packages/ui`
+- [ ] Widget registry exported from `admin-ui/src/orbiteus-ui/widgets`
 
 ## 4. List view
 
@@ -83,7 +83,7 @@
 
 ## 8. AI integration in UI
 
-- [ ] `<PromptInput>` widget exported from `packages/ui`
+- [ ] `<PromptInput>` widget exported from `admin-ui/src/orbiteus-ui`
 - [ ] `<AIChatPanel>` (sidebar / drawer)
 - [ ] `<AIDashboard>` for prompt-driven charts
 - [ ] `useAIContext(model, id)` hook

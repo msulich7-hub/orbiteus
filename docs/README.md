@@ -29,7 +29,7 @@ conventions, and decisions.
 | 07 | [`07-api.md`](./07-api.md) | Auto-CRUD, query operators, OpenAPI, webhooks |
 | 08 | [`08-admin-ui.md`](./08-admin-ui.md) | Dynamic renderer, widget registry, ⌘K |
 | 09 | [`09-portal-ui.md`](./09-portal-ui.md) | External partner portal |
-| 10 | [`10-design-system.md`](./10-design-system.md) | Mantine 9, packages/ui, branding |
+| 10 | [`10-design-system.md`](./10-design-system.md) | Mantine 9, `orbiteus-ui`, branding |
 | 11 | [`11-realtime.md`](./11-realtime.md) | SSE + Redis Pub/Sub backplane |
 | 12 | [`12-events-and-queues.md`](./12-events-and-queues.md) | EventBus + Outbox + Celery |
 | 13 | [`13-cache.md`](./13-cache.md) | Redis usage map and TTLs |

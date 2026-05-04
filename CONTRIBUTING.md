@@ -10,6 +10,7 @@ We are glad you want to help improve the engine. This guide matches how the **Or
 | `admin-ui/` | Next.js 16 admin (App Router, React 19, Mantine 9) — dynamic renderer driven by backend `ui-config` |
 | `docs/` | Cross-cutting documentation; start with **`docs/ARCHITECTURE.md`** |
 | `docker-compose.yml` | Full stack (PostgreSQL, backend, admin UI) for local integration |
+| `portal-ui/` | Next.js 16 portal (separate app; copy widgets from `admin-ui/src/orbiteus-ui/` when needed) |
 
 There is no `packages/` workspace: new backend code belongs in **`backend/`** (core vs module), new UI in **`admin-ui/`**.
 

@@ -70,7 +70,7 @@ services:
 
   frontend:
     build:
-      # Monorepo root context so npm workspaces resolve `@orbiteus/ui`.
+      # Monorepo root context so npm workspaces resolve admin-ui + portal-ui.
       context: .
       dockerfile: admin-ui/Dockerfile
     ports:

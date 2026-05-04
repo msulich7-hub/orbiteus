@@ -97,7 +97,7 @@ true. No exceptions, no "we'll add it later".
 - [ ] `<PromptInput>` available in the form view of any model.
 - [ ] `<AIChatPanel>` available globally (drawer) and per-record (inline).
 - [ ] `<AIDashboard>` renders chart specs returned by `/api/ai/dashboard`.
-- [ ] Components live in `packages/ui` workspace; consumed by both apps.
+- [ ] Components live under `admin-ui/src/orbiteus-ui/` when both apps need the same UX; portal copies when adopted.
 - [ ] Graceful fallback when no `ir_ai_credential` is configured.
 
 ## 11. Canonical CRM (Person / Lead / Stage / Team)

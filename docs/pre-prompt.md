@@ -95,7 +95,8 @@ This list is binding. Anything outside it requires an ADR.
   ADR-0002 floats with major Mantine versions; the *decision* (Mantine as
   the sole DS) is what's locked, not the version number.
 - @tabler/icons-react 3, axios 1, dayjs 1, recharts 3, @dnd-kit 6
-- npm workspaces with `packages/ui` shared between `admin-ui` and `portal-ui`
+- npm workspaces: `admin-ui` and `portal-ui` only; shared widgets/AI live in
+  `admin-ui/src/orbiteus-ui/` (copy into portal-ui when needed)
 
 ### Infra
 - Docker + Docker Compose; nginx (reverse proxy + TLS via certbot/Let's Encrypt)
@@ -193,13 +194,14 @@ in `bootstrap.py` of that module — never in `backend/api.py`.
   stop and use the catch-all `[module]/[model]` routes instead.
 - Public landing lives at `/welcome`; sign-in form lives at `/login`; authenticated
   app starts at `/`. Do not merge those concerns into one route.
-- All UI primitives come from Mantine 9 + `packages/ui` (shared widgets).
+- All UI primitives come from Mantine 9 + components under `admin-ui/src/`
+  (including `orbiteus-ui/` for cross-cutting widgets and AI surfaces).
   Do not introduce a second design system.
 - Forms render through the widget registry. To add a new input type, register
   a widget; do not write ad-hoc components inside pages.
 - Branding (`useBranding()`) drives logo, name, and favicon. Do not hardcode
   product names anywhere in tracked content.
-- The `<PromptInput>` widget from `packages/ui` is the canonical way to embed
+- The `<PromptInput>` widget from `admin-ui/src/orbiteus-ui/ai` is the canonical way to embed
   AI in any module page.
 - **Auth transport for the browser.** Admin UI uses an httpOnly session
   cookie (`orbiteus_token`) set by `/api/auth/login`. Never store JWTs in
@@ -248,7 +250,7 @@ docs/06-auth.md                 — JWT, refresh rotation, 2FA, share-links
 docs/07-api.md                  — auto-CRUD, query operators, OpenAPI, webhooks
 docs/08-admin-ui.md             — dynamic renderer, widget registry, ⌘K
 docs/09-portal-ui.md            — external partner portal
-docs/10-design-system.md        — Mantine 9 + packages/ui + branding
+docs/10-design-system.md        — Mantine 9 + admin-ui `orbiteus-ui/` + branding
 docs/11-realtime.md             — SSE + Redis Pub/Sub backplane
 docs/12-events-and-queues.md    — EventBus + Postgres Outbox + Celery
 docs/13-cache.md                — Redis usage map and TTLs

@@ -31,7 +31,7 @@
 1. `ir_ai_credential` table + Fernet encryption
 2. Provider abstraction (Anthropic, OpenAI, Ollama)
 3. `AIModuleConfig` registry + `ai.py` convention
-4. `<PromptInput>` widget in `packages/ui`
+4. `<PromptInput>` widget in `admin-ui/src/orbiteus-ui`
 5. `pgvector` + `ir_embedding` + Outbox-driven reindex
 
 ### Wave 4 — Canonical CRM (MVP)

@@ -257,7 +257,7 @@ ADRs: 0008.
 
 Frontend:
 
-- Add npm workspaces; create `packages/ui`.
+- Add npm workspaces (`admin-ui`, `portal-ui`); colocate shared widgets under `admin-ui/src/orbiteus-ui/`.
 - Remove all hardcoded pages: `app/crm/*`, `app/base/*`, `app/technical/*`.
 - Deprecate `Sidebar.tsx`.
 - Translate remaining Polish strings to English.
@@ -278,7 +278,7 @@ ADRs: 0016.
 
 ### PR 11 — `feat/admin-ui-widgets-and-ai`
 
-Frontend (in `packages/ui`):
+Frontend (in `admin-ui/src/orbiteus-ui/`):
 
 - Widgets: many2one (resolved), badge (status colors), monetary (locale +
   currency), statusbar (steps), tags (TagsInput), date display, readonly.

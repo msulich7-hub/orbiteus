@@ -11,7 +11,8 @@ resources. The threat model and UX are different from the admin UI.
 
 ## Decision
 
-`portal-ui/` is a separate Next.js 16 application sharing only `packages/ui`
+`portal-ui/` is a separate Next.js 16 application; shared UX is copied from
+`admin-ui/src/orbiteus-ui/` when the portal adopts the same widgets.
 with `admin-ui`. Separate domain (`portal.example.com`), separate cookies,
 separate CSP, separate routes. JWTs carry `scope=portal` and are never
 accepted by admin-ui.

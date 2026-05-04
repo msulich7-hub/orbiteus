@@ -49,7 +49,7 @@ Auto-CRUD (`AutoRouter`) plus curated routes:
 - `suggested_prompts = ["Show pipeline for this month", "Top 5 leads by value"]`
 
 The Admin UI dashboard embeds `<PromptInput>` and `<AIDashboard>` from
-`packages/ui` — no module-specific code on the frontend.
+`admin-ui/src/orbiteus-ui/` — no module-specific code on the frontend.
 
 ## Bootstrap
 

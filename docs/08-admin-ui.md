@@ -5,7 +5,7 @@
 - Next.js 16 App Router
 - React 19
 - Mantine 9 (only design system; no shadcn / MUI / Chakra / Ant)
-- `@orbiteus/ui` (workspace package: shared widgets, hooks, AI inputs)
+- `admin-ui/src/orbiteus-ui/` — cross-cutting widgets + AI inputs (copy to portal-ui when needed)
 - axios, dayjs, recharts, @dnd-kit, @tabler/icons-react
 
 ## Routes
@@ -58,8 +58,8 @@ Forms and lists render through widgets keyed by `widget` attribute or field type
 | `tags` | `list[str]` (JSON array) |
 | `readonly` | any widget with `readonly=true` |
 
-To add a new widget: register it in `packages/ui/src/widgets/` and the
-`<ResourceForm>` / `<ResourceList>` components pick it up automatically.
+To add a new widget: implement it under `admin-ui/src/orbiteus-ui/widgets/` and wire it in
+`<ResourceForm>` / `<ResourceList>` as today.
 
 ## View types
 
@@ -92,7 +92,7 @@ To add a new widget: register it in `packages/ui/src/widgets/` and the
 | `<AIDashboard>` | Prompt → `aggregate` queries → recharts spec |
 | `useAIContext(model, id)` | Hook that scopes context to current view |
 
-All four come from `packages/ui` and are mandatory entry points — modules do
+The four AI entry points live in `admin-ui/src/orbiteus-ui/ai/` — modules do
 not call provider SDKs directly.
 
 ## Branding
@@ -106,5 +106,5 @@ not call provider SDKs directly.
 - Per-module page files in `admin-ui/src/app/<module>/...`.
 - Direct calls to provider APIs from the front-end.
 - A second design system.
-- New UI primitives outside `packages/ui` widget registry.
+- New UI primitives outside the `orbiteus-ui` widget set without an ADR.
 - Inline styles that bypass Mantine theme tokens.

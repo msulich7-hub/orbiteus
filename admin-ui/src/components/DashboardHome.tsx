@@ -20,7 +20,7 @@ import {
   IconTrophy,
   IconUsers,
 } from "@tabler/icons-react";
-import { AIDashboard, PromptInput } from "@orbiteus/ui";
+import { AIDashboard, PromptInput } from "@/orbiteus-ui";
 
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/formatters";

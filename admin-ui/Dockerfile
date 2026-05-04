@@ -1,5 +1,4 @@
-# Dev image. Build context is the monorepo root so npm workspaces can resolve
-# `@orbiteus/ui` (PR 10 / ADR-0016).
+# Dev image. Build context is the monorepo root (npm workspaces: admin-ui + portal-ui).
 FROM node:20-alpine
 
 WORKDIR /app
@@ -8,7 +7,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY admin-ui/package.json ./admin-ui/
 COPY portal-ui/package.json ./portal-ui/
-COPY packages ./packages
 
 RUN npm install --include=dev
 
