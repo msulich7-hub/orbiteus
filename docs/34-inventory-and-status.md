@@ -110,7 +110,7 @@
 | **Toasts (success/error/403/404)** | PARTIAL | scattered | unify in `lib/api.ts` |
 | **Empty states + loading skeletons** | DONE | `components/EmptyState.tsx` (icon + title + dimmed copy + optional CTA), `components/SkeletonRows.tsx` (table skeleton with configurable columns/rows + trailing actions); wired into `ResourceList`, `ResourceKanban`, `ResourceCalendar`, `ResourceGraph` (all show skeletons while loading + EmptyState when no data, with search-aware copy on lists) | covered by build typecheck on touched files |
 | **Polish strings** | LEAK | several files | EN-only cleanup |
-| **Vitest setup** | DONE (basic) | one test | needs RTL setup + coverage |
+| **Vitest setup** | DONE | `admin-ui/vitest.config.ts` (`*.test.{ts,tsx}` glob), 5 test files / 32 cases covering `viewParser`, `formatters`, `realtime` topic conversion + EventSource shape, `StatusBadge` colour map, `MonetaryField` Intl formatting | DoD §15.2 met |
 | **Playwright E2E** | DONE | `admin-ui/e2e/{critical-path,realtime,cmd-k,audit-log-realtime,webhook-test}.spec.ts` — 5 deterministic scenarios always green (welcome page, login form renders, API login + redirect, crm/person list, /api/health/live), 6 advanced scenarios gated on `E2E_FULL_SUITE=1` (cross-tab realtime, audit-log realtime, Cmd-K palette, create person, kanban, webhook test) | DoD §15.3 met |
 
 ## Portal UI (`portal-ui/`)

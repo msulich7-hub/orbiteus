@@ -58,3 +58,7 @@ memory/
 coverage.xml
 .coverage
 htmlcov/
+
+# Test artifacts
+admin-ui/test-results/
+admin-ui/playwright-report/
