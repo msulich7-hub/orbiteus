@@ -18,46 +18,26 @@
 
 ---
 
-## What Orbiteus is optimising for
+## What is Orbiteus?
 
-Agentic coding is great at producing diffs. It is weak at **keeping** a large Python + Next codebase aligned on one tenancy model, one RBAC story, one audit trail, and one deployment story. Orbiteus turns those cross-cutting choices into **shared primitives** so human maintainers and **coding agents** converge on the same seams.
+Orbiteus is **not a product** — it's a **platform for building products**.
 
-The engine is **general-purpose business software infrastructure** — not a single SaaS SKU. You register modules; the registry wires persistence, HTTP surface, admin UI metadata, security, background work, realtime fan-out, and an **agent-safe** AI tool path (BYOK; tools never run above the caller’s permissions).
+You install the engine, configure modules, brand the UI, and get **your own** business application — shaped around **your** processes, not the other way around.
 
-Concretely, the repo ships:
+## What you can build with Orbiteus
 
-1. **A module spine** — `registry.register("…")`, repositories, auto-CRUD, view XML, Command Palette actions, and optional `ai.py` declarations so new domain code has obvious landing zones.
-2. **Doc-first guardrails** — `docs/pre-prompt.md`, ADRs, and automated tests are treated as part of the contract, not appendix prose.
-3. **Production defaults before line one of your domain** — multi-tenant isolation, layered RBAC, audit events, outbox + webhooks, Celery schedules, SSE + Redis backplane, metrics, backups, and CI gates.
-4. **A reference CRM slice** — proves list / form / kanban / calendar / graph + realtime + AI tools; copy the pattern for any other vertical.
-5. **MIT source you host yourself** — you own the deployment; the framework is not a per-seat tax on your runtime.
+- **Gym chain management** (members, contracts, trainers)
+- **Interior design studio** (projects, suppliers, subcontractors)
+- **Transport management system (TMS)**
+- **Niche CRM SaaS** for any vertical
+- **Warehouse management (WMS)**
+- **Any combination of the above**
 
----
-
-## Who it is for
-
-- **Engineering leaders** who already adopted agentic IDEs and saw raw speed without a shared architectural spine.
-- **Builders shipping internal or customer-facing tools** who want post-demo software: typed APIs, enforced isolation, and operability.
-- **Small teams** who need ERP-*grade* controls (tenants, permissions, audit) without renting someone else’s entire product roadmap.
+The hero line is literal: **80% of the plumbing is already there** — auth, tenants, permissions, audit, APIs, admin UI, jobs, realtime, and **AI agents** calling tools under the same rules as people. You sell the **20%** that is your market: members, loads, studio phases, stock moves — not another hand-rolled session stack or webhook retry loop.
 
 ---
 
-## Typical builds on this foundation
-
-Orbiteus is **not** “ERP only”. It is a **neutral substrate** for line-of-business software: you compose modules while the engine keeps the guardrails consistent.
-
-| | |
-|---|---|
-| **Internal ops** | Line-of-business apps, approvals, master data, and admin surfaces generated from your module definitions. |
-| **CRM & pipeline** | Reference module (Person, Lead, Stage, Team) with list, kanban, calendar, graph, and realtime — clone the pattern for your domain. |
-| **Headless / API-first** | Typed REST + OpenAPI per registered model for mobile, web, or integrations — same tenancy and rules as the UI. |
-| **Partner & field portals** | Share-link access with explicit permissions; separate Next.js portal app with scoped realtime. |
-| **Agentic AI on your data model** | Streaming chat, tool registry, dashboard aggregates — always under caller RBAC. |
-| **Multi-tenant SaaS backends** | Strict `tenant_id` discipline, record rules, and tests that prove cross-tenant isolation. |
-
----
-
-## Highlights
+## Capabilities (proof, not philosophy)
 
 | | |
 |---|---|
@@ -65,17 +45,11 @@ Orbiteus is **not** “ERP only”. It is a **neutral substrate** for line-of-bu
 | **Zero TSX per business module** | Catch-all admin routes + widget registry + view XML — new tables and APIs ship with matching UI patterns. |
 | **Multi-tenant by default** | Repository-enforced tenancy; negative tests for cross-tenant access. |
 | **Layered RBAC** | Model access, record rules, actions, and AI scopes; Redis-backed cache with cross-replica invalidation. |
-| **Audit everything that matters** | CRUD, auth events, AI tool calls — with redaction hooks for sensitive payloads. |
+| **Audit** | CRUD, auth events, AI tool calls — with redaction hooks for sensitive payloads. |
 | **Events, outbox, webhooks** | Atomic outbox rows, Celery workers, bounded retries, dead-letter path, HMAC-signed delivery. |
 | **Realtime** | SSE + Redis Pub/Sub; tenant-scoped topics; admin lists and portal views can subscribe safely. |
-| **Boring infra in one command** | Docker Compose brings Postgres 16 + pgvector, Redis, workers, admin UI, portal UI, and nginx-shaped reverse proxy patterns. |
-| **CI you can trust** | Docs checks, pytest + coverage artifact, Vitest, `next build`, Playwright, audits, secrets baseline, and license policy on every merge. |
-
----
-
-## Where your time goes after clone
-
-The hero line calls out **80% of the job done** on the *plumbing*: identity, tenancy, RBAC, audit, queues, webhooks, realtime, observability, CI, admin renderer, portal pattern, and an agent-aware AI harness. Your calendar should tilt toward **domain tables, workflows, UX, and integrations** — the slice that actually differentiates a business — instead of re-deriving session and permission infrastructure on every greenfield.
+| **Infra in one command** | Docker Compose: Postgres 16 + pgvector, Redis, workers, admin UI, portal UI, nginx-shaped reverse proxy patterns. |
+| **CI gate** | Docs checks, pytest + coverage, Vitest, `next build`, Playwright, audits, secrets baseline, license policy. |
 
 ---
 
