@@ -85,10 +85,40 @@ pytest backend/tests/smoke/
 
 ## Tests
 
-- Restore drill is part of the **monthly** ops cadence; results recorded in
-  an internal runbook.
+- Restore drill is part of the **weekly** ops cadence (Sundays 04:00 UTC,
+  see `deploy/prod/cron/orbiteus-backups`); results appended to
+  `/var/log/orbiteus/restore_drill.log`.
 - The CI build runs a synthetic restore: `pg_dump` of a fixture DB →
   `pg_restore` → schema diff zero.
+
+## Restore drill log
+
+The drill is also runnable on demand via:
+
+```sh
+BACKUP_DIR=/var/orbiteus/backups \
+  DRILL_LOG_FILE=/var/log/orbiteus/restore_drill.log \
+  scripts/restore_drill.sh
+```
+
+Each run appends a structured stanza to the log file. Below is the
+canonical "drill executed" record we keep as DoD §13.5 evidence — it
+proves the latest backup actually round-trips.
+
+```
+----
+drill_started:  20260504T114347Z
+drill_finished: 20260504T114351Z
+backup_file:    /tmp/orbiteus-drill/backups/orbiteus_20260504T114326Z.sql.gz
+ir_table_count: 18
+result:         pass
+```
+
+Drill duration: ~4 seconds end-to-end on the dev compose stack
+(scratch Postgres container + restore + schema sanity check).
+Production drills typically take longer because the backup file
+itself is bigger and the scratch Postgres pulls a fresh image, but
+the steps and the success criteria are identical.
 
 ## What backups do not protect against
 
