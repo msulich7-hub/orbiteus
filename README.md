@@ -20,7 +20,7 @@
 
 ## What is Orbiteus?
 
-Orbiteus is an **AI-agent framework**: your agents use it to build **your** business application — CRM, ERP, HR, WMS, or anything in between. You start with **roughly 80% of the work already done**. You focus **only** on the business needs you describe to the agent.
+Orbiteus is a software development framework: your AI agents use it to build your business application — CRM, ERP, HR, WMS, or anything in between. You start with roughly 80% of the work already done. You focus only on the business needs you describe to the agent.
 
 You can ship a genuinely solid app **in hours, or at most a few days**. When you are ready, you tell the agent to run it **on our infrastructure** or on **servers and environments you specify**.
 
