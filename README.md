@@ -22,7 +22,13 @@
 
 Orbiteus is **not a product** — it's a **platform for building products**.
 
-You install the engine, configure modules, brand the UI, and get **your own** business application — shaped around **your** processes, not the other way around.
+## HOW TO USE IT?
+
+**Tell your AI agent to build your app using Orbiteus** — that's the whole idea.
+
+The engine already carries the **technical baseline**: app server, database layer, admin shell, security and tenancy model, audit trail, background jobs, webhooks, portal surface, and AI tools that obey the same rules as people. Your agent works **inside** this codebase and its contracts ([`docs/pre-prompt.md`](docs/pre-prompt.md)) so you are not inventing sessions, queues, or RBAC from scratch.
+
+You **start with roughly 80% of the plumbing done**. **What you focus on** is describing your business — who uses the app, what you sell, what you track, what “done” looks like, and the edge cases that matter. **What the AI agent and Orbiteus take on together** is the heavy technical work: modules, migrations, views, APIs, tests, and shipping something you can run and grow.
 
 ## What you can build with Orbiteus
 

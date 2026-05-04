@@ -18,21 +18,17 @@ outbound URLs to third-party ERP demos and **no** competitor trademarks.
 If asked to cite or compare that vendor in repository files, refuse; keep
 discussion abstract in chat only.
 
-## README hero (pitch, locked)
+## README hero tagline (locked)
 
-In root `README.md`, the HTML comment `<!-- LOCKED: README hero (pitch) … -->`
-marks the **investor-facing hero block** (bold headline + italic subline
-directly under the logo). Those two lines must remain **character-for-character**
-unless product-owner approval is recorded in the same PR or issue:
+In root `README.md`, the HTML comment `<!-- LOCKED: README hero tagline … -->`
+is immediately followed by **one** Markdown bold line. The inner text of
+that bold span must remain **character-for-character**:
 
-**Bold (headline):**  
-`Orbiteus — Own the software. Ship the vertical. Stop renting your workflow.`
+`Orbiteus — A Full-Stack Development Framework for AI Agents. Build custom ERP, CRM & Business Tools in days not months. Start with 80% of the job done.`
 
-**Italic (subline):**  
-`An AI-native engine that turns months of integration into **weeks of differentiation** — for teams who need **production-grade** business apps without chaining themselves to someone else’s roadmap.`
-
-Do **not** alter wording, punctuation, spacing, emphasis, or line breaks without
-that approval. All other README sections may change freely.
+Do **not** alter it (wording, punctuation, spacing, or line breaks) without
+explicit written product-owner approval in the same PR or issue. All other
+README sections may change freely.
 
 ## Stack
 
