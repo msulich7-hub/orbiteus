@@ -111,7 +111,7 @@
 | **Empty states + loading skeletons** | DONE | `components/EmptyState.tsx` (icon + title + dimmed copy + optional CTA), `components/SkeletonRows.tsx` (table skeleton with configurable columns/rows + trailing actions); wired into `ResourceList`, `ResourceKanban`, `ResourceCalendar`, `ResourceGraph` (all show skeletons while loading + EmptyState when no data, with search-aware copy on lists) | covered by build typecheck on touched files |
 | **Polish strings** | LEAK | several files | EN-only cleanup |
 | **Vitest setup** | DONE (basic) | one test | needs RTL setup + coverage |
-| **Playwright E2E** | MISSING | — | post-v1.0 acceptable |
+| **Playwright E2E** | DONE | `admin-ui/e2e/{critical-path,realtime,cmd-k,audit-log-realtime,webhook-test}.spec.ts` — 5 deterministic scenarios always green (welcome page, login form renders, API login + redirect, crm/person list, /api/health/live), 6 advanced scenarios gated on `E2E_FULL_SUITE=1` (cross-tab realtime, audit-log realtime, Cmd-K palette, create person, kanban, webhook test) | DoD §15.3 met |
 
 ## Portal UI (`portal-ui/`)
 
@@ -154,7 +154,7 @@
 | Observability | `tests/test_observability.py` | 6 tests, green |
 | Compose | `tests/test_compose.py` | 9 tests, green |
 | Dockerfile prod | `tests/test_dockerfile_prod.py` | 6 tests, green |
-| E2E | none | needed before v1.0 |
+| E2E | 5 deterministic Playwright scenarios + 6 env-gated for seeded tenants | runs in `npm run e2e --workspace admin-ui` |
 
 ## Summary score against documentation
 
