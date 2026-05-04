@@ -107,7 +107,7 @@
 | **`<AIDashboard>`** | DONE | `packages/ui/src/ai/AIDashboard.tsx` (recharts BarChart) | PR 10 |
 | **Shared widgets** | DONE | Badge, Monetary, Statusbar, Many2OneSelect, TagsField in `packages/ui/src/widgets/` | PR 10 |
 | **Toasts (success/error/403/404)** | PARTIAL | scattered | unify in `lib/api.ts` |
-| **Empty states + loading skeletons** | MISSING | — | polish phase |
+| **Empty states + loading skeletons** | DONE | `components/EmptyState.tsx` (icon + title + dimmed copy + optional CTA), `components/SkeletonRows.tsx` (table skeleton with configurable columns/rows + trailing actions); wired into `ResourceList`, `ResourceKanban`, `ResourceCalendar`, `ResourceGraph` (all show skeletons while loading + EmptyState when no data, with search-aware copy on lists) | covered by build typecheck on touched files |
 | **Polish strings** | LEAK | several files | EN-only cleanup |
 | **Vitest setup** | DONE (basic) | one test | needs RTL setup + coverage |
 | **Playwright E2E** | MISSING | — | post-v1.0 acceptable |

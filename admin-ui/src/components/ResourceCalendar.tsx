@@ -8,7 +8,7 @@ import {
   Button,
   Divider,
   Group,
-  Loader,
+  Skeleton,
   Paper,
   SegmentedControl,
   Stack,
@@ -126,7 +126,14 @@ export default function ResourceCalendar({ resource, dateField, titleField = "na
     [eventsByDay, monthKey, view, anchorDate, selectedKey],
   );
 
-  if (loading) return <Loader color="gray" size="sm" />;
+  if (loading) {
+    return (
+      <Stack gap="xs">
+        <Skeleton height={36} radius="sm" />
+        <Skeleton height={300} radius="sm" />
+      </Stack>
+    );
+  }
 
   function shiftPeriod(dir: -1 | 1) {
     const unit = view === "month" ? "month" : view === "week" ? "week" : "day";

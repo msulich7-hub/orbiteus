@@ -9,12 +9,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Group, Title, Text, Button, Stack, Paper, Badge, Loader, Alert, ScrollArea,
+  Group, Title, Text, Button, Stack, Paper, Badge, Skeleton, Alert, ScrollArea,
   ThemeIcon,
 } from "@mantine/core";
 import { IconPlus, IconAlertCircle } from "@tabler/icons-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import EmptyState from "@/components/EmptyState";
 
 interface KanbanGroup {
   id: string;
@@ -127,7 +128,9 @@ function KanbanColumn({ group, items, titleField, subtitleFields, activeId }: {
               />
             ))}
             {items.length === 0 && (
-              <Text size="xs" c="dimmed" ta="center" py="md">No records</Text>
+              <Text size="xs" c="dimmed" ta="center" py="md">
+                Drop a card here
+              </Text>
             )}
           </Stack>
         </SortableContext>
@@ -246,8 +249,42 @@ export default function ResourceKanban({
     }
   }
 
-  if (loading) return <Loader color="gray" size="sm" />;
+  if (loading) {
+    return (
+      <Group align="flex-start" gap="md">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Stack key={i} gap="xs" style={{ minWidth: 240 }}>
+            <Skeleton height={32} radius="sm" />
+            <Skeleton height={80} radius="sm" />
+            <Skeleton height={80} radius="sm" />
+          </Stack>
+        ))}
+      </Group>
+    );
+  }
   if (error) return <Alert icon={<IconAlertCircle size={16} />} color="red">{error}</Alert>;
+  // Whole-board empty state — when every group has zero cards.
+  const totalItems = Object.values(columns).reduce((acc, arr) => acc + arr.length, 0);
+  if (groups.length === 0 || totalItems === 0) {
+    return (
+      <Stack gap="md">
+        <Group justify="space-between">
+          <Title order={3}>{title}</Title>
+          {createHref && (
+            <Button component={Link} href={createHref} leftSection={<IconPlus size={16} />} size="sm">
+              New
+            </Button>
+          )}
+        </Group>
+        <EmptyState
+          title="No records yet"
+          description="Create one to get the board going."
+          ctaLabel={createHref ? "New" : undefined}
+          ctaHref={createHref}
+        />
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="md">

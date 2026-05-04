@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader, Stack, Text, Title, Progress, Group, Paper } from "@mantine/core";
+import { Skeleton, Stack, Text, Title, Progress, Group, Paper } from "@mantine/core";
 import { api } from "@/lib/api";
 import type { FieldMeta } from "@/lib/api";
 import { humanizeFieldName, useI18n } from "@/lib/i18n";
+import EmptyState from "@/components/EmptyState";
 
 interface Props {
   resource: string;
@@ -67,13 +68,22 @@ export default function ResourceGraph({ resource, rowField, measureField, fieldM
   const rowFieldLabel = fieldMeta?.find((f) => f.name === rowField)?.label ?? humanizeFieldName(rowField);
   const measureFieldLabel = fieldMeta?.find((f) => f.name === measureField)?.label ?? humanizeFieldName(measureField);
 
-  if (loading) return <Loader color="gray" size="sm" />;
+  if (loading) {
+    return (
+      <Stack gap="xs">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} height={42} radius="sm" />
+        ))}
+      </Stack>
+    );
+  }
 
   if (chartData.length === 0) {
     return (
-      <Text c="dimmed" size="sm">
-        {t("no_chart_data", { rowField: rowFieldLabel, measureField: measureFieldLabel })}
-      </Text>
+      <EmptyState
+        title={t("no_chart_data_title") || "Nothing to chart yet"}
+        description={t("no_chart_data", { rowField: rowFieldLabel, measureField: measureFieldLabel })}
+      />
     );
   }
 

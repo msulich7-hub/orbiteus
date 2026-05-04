@@ -4,9 +4,11 @@ import type { FieldMeta } from "@/lib/api";
 import { StatusBadge } from "@/components/widgets/StatusBadge";
 import { displayMany2oneCell, formatListDate } from "@/lib/formatters";
 import { MonetaryCell } from "@/components/widgets/MonetaryField";
+import EmptyState from "@/components/EmptyState";
+import SkeletonRows from "@/components/SkeletonRows";
 import Link from "next/link";
 import {
-  Title, Text, Button, Table, Loader, Alert, Group, Stack,
+  Title, Text, Button, Table, Alert, Group, Stack,
   ActionIcon, Modal, Pagination, TextInput, Paper, ScrollArea, Badge,
 } from "@mantine/core";
 import {
@@ -240,10 +242,9 @@ export default function ResourceList({
           />
         </Paper>
 
-        {loading && <Loader color="gray" size="sm" />}
         {error && <Alert icon={<IconAlertCircle size={16} />} color="red" title="Error">{error}</Alert>}
 
-        {!loading && !error && (
+        {!error && (
           <>
             <Paper>
               <ScrollArea>
@@ -292,10 +293,25 @@ export default function ResourceList({
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {filteredItems.length === 0 ? (
+                    {loading ? (
+                      <SkeletonRows
+                        columns={displayColumns.length}
+                        trailingColumns={1}
+                        rows={5}
+                      />
+                    ) : filteredItems.length === 0 ? (
                       <Table.Tr>
-                        <Table.Td colSpan={displayColumns.length + 1}>
-                          <Text c="dimmed" ta="center" py="xl">No records</Text>
+                        <Table.Td colSpan={displayColumns.length + 1} style={{ background: "transparent" }}>
+                          <EmptyState
+                            title={searchQuery ? "No matching records" : "No records yet"}
+                            description={
+                              searchQuery
+                                ? "Try a different search term, or clear the filter to see everything."
+                                : "Click the button below to create your first record."
+                            }
+                            ctaLabel={createHref ? "New" : undefined}
+                            ctaHref={createHref}
+                          />
                         </Table.Td>
                       </Table.Tr>
                     ) : (
