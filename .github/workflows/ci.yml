@@ -249,32 +249,14 @@ jobs:
           pip install --upgrade pip
           pip install -e ".[dev]"
           pip install pip-licenses
-      - name: Generate Python license report
-        run: |
-          pip-licenses --format=json \
-                      --with-system --with-urls --with-license-file \
-                      --output-file=THIRD_PARTY_LICENSES.python.json
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Generate Node license report
-        run: |
-          npm install --include-workspace-root
-          npx --yes license-checker --json --excludePrivatePackages \
-              > THIRD_PARTY_LICENSES.node.json
-      - name: Reject GPL/AGPL/LGPL families
-        run: |
-          set -e
-          fail=0
-          for f in THIRD_PARTY_LICENSES.python.json THIRD_PARTY_LICENSES.node.json; do
-            if grep -E '"License":\s*"(GPL|AGPL|LGPL)' "$f" \
-               || grep -E '"licenses":\s*"(GPL|AGPL|LGPL)' "$f"; then
-              echo "::error::$f mentions a GPL-family license (DoD §16.4 / §1.7)"
-              fail=1
-            fi
-          done
-          test "$fail" -eq 0
+      - name: Install workspace deps
+        run: npm install --include-workspace-root
+      - name: Generate license manifests + no-GPL gate
+        run: sh scripts/generate_licenses.sh
       - name: Upload license artifacts
         if: always()
         uses: actions/upload-artifact@v4
