@@ -4,28 +4,203 @@ All notable changes to Orbiteus are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+> **Note on the existing `v1.0.0` git tag.** A `v1.0.0` tag was pushed
+> on 2026-05-03 against the engine snapshot below. With the framework
+> Definition of Done at ~92 % of its checkboxes (see
+> `docs/34-inventory-and-status.md`), the publishable version is
+> `v1.0.0-rc1`. The `v1.0.0` tag remains pinned to that earlier commit
+> for archival purposes; the `v1.0.0` GA tag waits for the four
+> follow-ups documented in the inventory.
+
 ## [Unreleased]
+
+Reserved for changes accepted into `main` after `v1.0.0-rc1` ships.
+
+## [1.0.0-rc1] — 2026-05-04 (release candidate)
+
+### Added — auth + access
+
+- **HttpOnly cookie session for the Admin UI.** JWTs no longer travel
+  through `localStorage`. Backend writes `orbiteus_token` (Path=`/`,
+  15 min) and `orbiteus_refresh` (Path=`/api/auth`, 7 days) as
+  `HttpOnly`, `SameSite=Lax` cookies; `Secure` is enabled automatically
+  in production. The new Edge proxy at `admin-ui/src/proxy.ts` (Next 16
+  successor of `middleware.ts`) redirects unauthenticated requests to
+  `/login?next=<path>` *before* SSR runs, eliminating the Flash Of
+  Authenticated Content. `Authorization: Bearer …` keeps working for
+  non-browser clients (the `/api/auth/login` body still ships both
+  tokens). See [ADR-0017](docs/adr/0017-httponly-cookie-session.md).
+- **`POST /api/auth/logout`** — clears both auth cookies and revokes
+  the current access `jti` in Redis. The Admin UI `Logout` menu item
+  posts to it before redirecting to `/login`.
+- **Password reset flow** — `POST /api/auth/password/{request,reset}`
+  with always-200 responses on `request` (defeats user enumeration),
+  per-email throttle, single-use JWT (TTL 30 min) revoked through the
+  shared Redis `jti` list. Mailer in dev logs to stdout; production
+  uses `aiosmtplib` with optional STARTTLS. New public pages
+  `/forgot-password` and `/reset/[token]`.
+- **Per-tenant + per-user rate-limit buckets.** The middleware now
+  decodes the access token (cookie or `Authorization` header) and
+  applies `rl:tenant:<tid>` (default 1000/min) and `rl:user:<uid>`
+  (default 60/min) on top of the existing `rl:ip:<host>`.
+- **`/welcome` split out from `/login`.** Marketing copy lives at the
+  new public route; `/login` is sign-in only. Whitelisted in the proxy
+  matcher so unauthenticated visitors can reach `/welcome`.
+
+### Added — framework primitives
+
+- **RBAC cache moved to Redis.** Two-tier cache: process-local L1 +
+  Redis-backed L2 keyed by `rbac:access` / `rbac:rules` / `rbac:version`.
+  Cross-replica invalidation over a `rbac.invalidate` Pub/Sub channel —
+  any mutation of `ir_model_access` / `ir_rules` propagates within
+  ~50 ms. Open-fail on Redis outage.
+- **`GET /api/base/aggregate?model=&group_by=&op={count|sum|avg|min|max}&measure=`**
+  framework primitive — single tenant-scoped endpoint that backs
+  the Graph view and the AI dashboard. Reuses `apply_record_rules`
+  so the data pipe through the same RBAC the repository layer uses.
+- **`?expand=field1,field2` on every auto-CRUD list** — resolves
+  many2one foreign keys to a sibling `<field>__name` cell using the
+  first matching display column on the target table (`name |
+  label | title | email | code`). Tenant-scoped + record-rule
+  filtered.
+- **AI streaming chat.** `POST /api/ai/chat?stream=1` returns
+  `text/event-stream` with `event: text|tool_call|done|error`.
+  Native streaming for Anthropic via `client.messages.stream(...)`;
+  default fallback for OpenAI/Ollama emits the full reply as a
+  single chunk + `done`.
+- **Mail abstraction** in `orbiteus_core/mail.py` — single
+  `send_mail(...)` coroutine with a dev-log fallback when
+  `smtp_host=""` and a production `aiosmtplib` path. Used today by
+  password reset; future template-driven mail will sit on top.
+- **Audit-log helper** `orbiteus_core/audit.py` — central
+  `write_audit(session, *, actor, operation, model, …)` with an
+  actor allow-list (`user|ai|portal|system`) and `redact_payload`
+  scrubbing. Wired into:
+    - `actor=user`, `operation=login` / `login_failed` /
+      `password_reset_requested` / `password_reset_completed` —
+      from `auth/router.py`.
+    - `actor=ai`, `operation=tool_call` — from every accepted
+      `chat()` invocation in `ai/router.py`, including the
+      streaming variant.
+
+### Added — UI
+
+- **MonetaryField widget** (`admin-ui/src/components/widgets/
+  MonetaryField.tsx`) with `MonetaryCell` (list cells) and
+  `MonetaryInput` (form input). Reads `currency_code` from the
+  ui-config `FieldMeta`, falls back to `PLN`. Backend serves
+  `currency_code` for every monetary field.
+- **EmptyState + SkeletonRows** components wired into
+  `ResourceList`, `ResourceKanban`, `ResourceCalendar`,
+  `ResourceGraph`. Loading shows shape-preserving skeletons; empty
+  shows an icon + headline + CTA. Search-aware copy on the list view.
+- **Login form** gains a "Forgot password?" anchor.
+
+### Added — portal
+
+- **Portal-scoped realtime** — new `GET /api/portal/realtime?token=`
+  share-token-authenticated SSE feed that reuses the same Redis
+  Pub/Sub backplane as the admin shell. The portal-ui share page
+  refreshes automatically when the underlying record changes.
+- **Portal mutations + view declaration.** Exchange response carries
+  `view_mode: "readonly"` (DoD §12.5 default) and
+  `available_mutations: [...]` derived from share-token permissions.
+  Frontend renders `CommentSurface` / `AttachmentSurface` only when
+  the corresponding permission is granted; both are still
+  permission-gated server-side in `_require_permission`.
+
+### Added — observability + ops
+
+- **Prometheus `/metrics` series expanded** to match
+  `docs/29-observability.md`: DB query duration + pool-in-use gauge,
+  Redis commands + latency, Celery task duration + outcomes + queue
+  depth, Outbox pending/dead, AI calls + tokens + provider latency,
+  SSE active connections, pubsub messages.
+- **Backups** — `scripts/backup_db.sh` gains an optional `aws s3 cp`
+  push (S3-compatible: AWS, B2, Wasabi, MinIO). New
+  `scripts/restore_drill.sh` spins up a scratch Postgres, restores
+  the latest backup, asserts the schema is healthy, and appends a
+  log line. Cron file at `deploy/prod/cron/orbiteus-backups`
+  schedules daily backup (02:00 UTC) and weekly drill (Sundays
+  04:00 UTC). Drill executed on the dev stack — log evidence in
+  `docs/31-backups-and-dr.md`.
+- **CSP + tightened security headers** in
+  `deploy/prod/nginx.conf` — Content-Security-Policy (allow-list of
+  `'self'` everywhere, `frame-ancestors 'none'`, `unsafe-inline` only
+  where Mantine + Next dev runtime require it),
+  `X-Content-Type-Options nosniff`, explicit
+  `Referrer-Policy strict-origin-when-cross-origin`. HSTS / X-Frame-
+  Options were already present.
+- **License audit + no-GPL gate** — new
+  `scripts/generate_licenses.sh` produces
+  `THIRD_PARTY_LICENSES.{python,node}.json` (committed) and audits
+  via Python with an explicit dynamic-link / multi-license
+  allow-list (`@img/sharp-libvips`, `psycopg2`, `psycopg2-binary`,
+  `num2words`, `docutils`).
+
+### Added — tests + CI
+
+- **Cross-tenant negative tests** (`tests/test_multi_tenant_isolation.py`
+  — 6 cases) covering read / list / write / delete returning **404**
+  (not 403) for cross-tenant access, plus SSE topic refusal (403)
+  and own-tenant SSE allowed (positive control).
+- **Webhook delivery + dead-letter** (`tests/test_webhook_delivery.py`)
+  — pending → done on 2xx with `X-Orbiteus-Signature` HMAC, pending →
+  retries → `dead` on 5xx with bounded `MAX_RETRIES`.
+- **Rate-limit buckets** (`tests/test_rate_limit_buckets.py`) — IP,
+  user, tenant; assertions on the canonical 429 body shape and
+  `Retry-After` header.
+- **Aggregate endpoint** (`tests/test_aggregate_endpoint.py`) — 8
+  cases: count/sum, Decimal→float coercion, op/measure/model/field
+  validation, tenant isolation.
+- **FK resolution** (`tests/test_fk_resolution.py`) — `?expand=...`
+  resolves names, NULL FKs stay NULL, unknown columns silently
+  ignored, no-leak without expand.
+- **Audit semantics** (`tests/test_audit_actor_semantics.py`) — login
+  success/fail rows + password reset rows + actor allow-list.
+- **AI streaming** (`tests/test_ai_streaming.py`) — default fallback,
+  native streaming pass-through, dispatch on `?stream=1`.
+- **Vitest per-widget tests** (`admin-ui/src/{lib,components/widgets}/
+  *.test.{ts,tsx}`) — 5 files / 32 cases covering `viewParser`,
+  `formatters`, `realtime` topic conversion + EventSource shape,
+  `StatusBadge` colour map, `MonetaryField` Intl formatting.
+- **Playwright E2E** — 5 deterministic scenarios in
+  `admin-ui/e2e/critical-path.spec.ts` plus 6 env-gated scenarios
+  (cross-tab realtime, audit-log realtime, Cmd-K palette, create
+  person, kanban, webhook-test) for seeded tenants.
+- **CI gate** (`.github/workflows/ci.yml`) — six parallel jobs (docs,
+  backend pytest+cov, frontend vitest+build, Playwright, security
+  audits, license check) plus a `gate` aggregator for branch
+  protection.
+- **Coverage report** (pytest-cov) configured in
+  `backend/pyproject.toml`. Canonical run hits **80 % TOTAL** across
+  `orbiteus_core` + `modules`; `coverage.xml` artifact published from
+  CI.
 
 ### Changed
 
-- **Auth transport for the Admin UI** — JWTs no longer travel through
-  `localStorage`. Backend now writes `orbiteus_token` (Path=/, 15 min) and
-  `orbiteus_refresh` (Path=/api/auth, 7 days) as `HttpOnly`, `SameSite=Lax`
-  cookies; `Secure` is enabled automatically in production. The new Edge
-  proxy at `admin-ui/src/proxy.ts` (Next 16 successor of `middleware.ts`)
-  redirects unauthenticated
-  requests to `/login?next=<path>` *before* SSR runs, eliminating the
-  Flash Of Authenticated Content. `Authorization: Bearer …` keeps working
-  for non-browser clients (the `/api/auth/login` body still ships both
-  tokens). See [ADR-0017](docs/adr/0017-httponly-cookie-session.md).
+- `docs/34-inventory-and-status.md` rewritten — replaced the
+  aspirational "100% across every layer" table with a per-section
+  DoD ledger (16 sections, 83 / 90 in-scope checkboxes). The seven
+  remaining items are categorised explicitly (3 deliberate post-v1.0
+  punts, 2 release-branch follow-ups, 1 paper cut, 1 hardening pass).
 
-### Added
+### Deferred to post-v1.0
 
-- `POST /api/auth/logout` — clears both auth cookies and revokes the
-  current access `jti` in Redis. The Admin UI `Logout` menu item now
-  posts to it before redirecting to `/login`.
+The following items are explicitly outside the v1.0.0 GA scope and
+documented in `docs/pre-prompt.md` "Consciously Deferred Framework
+Primitives":
 
-## [1.0.0] — 2026-05-03 (engine v1.0)
+- Generic workflow engine (Temporal explicitly excluded — ADR-0015).
+- Per-module backend coverage thresholds (`orbiteus_core ≥ 90%`,
+  etc.) — host-side `pytest --cov` under-reports the integration
+  paths that run inside the backend container; raising those
+  thresholds requires an in-container coverage collector.
+- `<AIDashboard>` React component (backend `/api/ai/dashboard`
+  scaffolded — UI placeholder until the dashboard wave).
+- AI move-the-lead E2E test (Playwright seeded variant).
+
+## [1.0.0] — 2026-05-03 (engine snapshot, archival)
 
 First **Engine v1.0** — boring tech stack, AI-native, ready for adopters.
 
