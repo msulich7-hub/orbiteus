@@ -41,8 +41,9 @@ services:
 
   frontend:
     build:
-      context: ./admin-ui
-      dockerfile: Dockerfile.prod
+      # Monorepo root — admin-ui/Dockerfile.prod copies package-lock + admin-ui + portal-ui workspaces.
+      context: .
+      dockerfile: admin-ui/Dockerfile.prod
       args:
         BACKEND_URL: http://backend:8000
         # Shown on /login sign-in step (baked at build). Keep in sync with bootstrap admin.

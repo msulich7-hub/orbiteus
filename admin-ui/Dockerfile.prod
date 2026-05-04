@@ -29,7 +29,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder /app/admin-ui/.next ./.next
-COPY --from=builder /app/admin-ui/node_modules ./node_modules
+# npm workspaces hoist dependencies to the monorepo root.
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/admin-ui/package.json ./
 COPY --from=builder /app/admin-ui/public ./public
 COPY --from=builder /app/admin-ui/next.config.js ./
