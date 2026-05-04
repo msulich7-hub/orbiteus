@@ -231,7 +231,32 @@ jobs:
           npm audit --workspace portal-ui --audit-level=high || echo "::warning::portal-ui has high-or-above advisories"
 
   # ---------------------------------------------------------------------------
-  # 6) licenses (pip-licenses + license-checker)
+  # 6a) detect-secrets baseline scan
+  # ---------------------------------------------------------------------------
+  secrets:
+    name: Secrets (detect-secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install detect-secrets
+        run: pip install "detect-secrets>=1.5"
+      - name: Scan tracked content against baseline
+        run: |
+          set -e
+          EXCLUDE='(^node_modules/|^backend/\.venv/|^\.next/|package-lock\.json|backend/migrations/versions/|^admin-ui/test-results/|^admin-ui/playwright-report/|^coverage\.xml$|^THIRD_PARTY_LICENSES\..*\.json$)'
+          detect-secrets-hook --baseline .secrets.baseline \
+            $(git ls-files | grep -Ev "$EXCLUDE") || {
+              echo "::error::detect-secrets found new candidate secrets. Refresh the baseline (detect-secrets scan --baseline .secrets.baseline) and inspect any added rows."
+              exit 1
+            }
+
+  # ---------------------------------------------------------------------------
+  # 6b) licenses (pip-licenses + license-checker)
   # ---------------------------------------------------------------------------
   licenses:
     name: License audit (no-GPL gate)
@@ -272,7 +297,7 @@ jobs:
   # ---------------------------------------------------------------------------
   gate:
     name: CI gate (DoD §15.4)
-    needs: [docs, backend, frontend, e2e, security, licenses]
+    needs: [docs, backend, frontend, e2e, security, secrets, licenses]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 1
@@ -284,4 +309,5 @@ jobs:
             && test "${{ needs.frontend.result }}" = "success" \
             && test "${{ needs.e2e.result }}"      = "success" \
             && test "${{ needs.security.result }}" = "success" \
+            && test "${{ needs.secrets.result }}"  = "success" \
             && test "${{ needs.licenses.result }}" = "success"

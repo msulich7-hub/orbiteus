@@ -187,7 +187,7 @@ v1.0 (a few were consciously deferred — see notes).
 | 13| Observability + ops                                  |  5 / 5       | JSON logs, expanded `/metrics` (14 series families), OTel opt-in, S3-capable backups, restore drill executed |
 | 14| Documentation reflects reality                       |  3 / 5       | `check_docs.py` + `tests/test_docs.py` + this inventory are honest. CHANGELOG is `1.0.0-rc1` (task 5.2). README.md root refresh deferred to the v1.0 release commit (task 5.3) |
 | 15| Tests + CI gate every merge                          |  3 / 4       | Vitest + Playwright (5 deterministic + 6 env-gated) + full CI gate landed. Backend coverage at 80% TOTAL, per-module thresholds (`orbiteus_core ≥ 90%`, etc.) deferred — host-side `pytest --cov` under-reports the integration paths that run inside the backend container; raising those thresholds requires an in-container coverage collector (post-v1.0). |
-| 16| Security gates                                       |  4 / 5       | prod refuses defaults, Pydantic everywhere, CSP+HSTS+Referrer headers, no-GPL gate landed. `detect-secrets` pre-commit hook is the open item. |
+| 16| Security gates                                       |  5 / 5       | prod refuses defaults, Pydantic everywhere, CSP+HSTS+Referrer headers, no-GPL gate, `detect-secrets` pre-commit hook + CI gate (`.pre-commit-config.yaml`, `.secrets.baseline` refreshed, `.github/workflows/{secrets,ci}.yml`). |
 |   | **Totals**                                           | **83 / 90**  | ≈ **92 %** of in-scope DoD checkboxes |
 
 The seven remaining checkboxes split into:
