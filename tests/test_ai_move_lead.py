@@ -55,7 +55,7 @@ def _ensure_path():
     os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
     os.environ.setdefault(
         "DATABASE_URL",
-        "postgresql+asyncpg://orbiteus:orbiteus@localhost:5433/orbiteus",
+        "postgresql+asyncpg://orbiteus:orbiteus@localhost:5433/orbiteus",  # pragma: allowlist secret
     )
     os.environ.setdefault("SECRET_KEY", "change-me-in-development")
 
@@ -184,7 +184,7 @@ def _login_admin() -> str:
 
     r = httpx.post(
         f"{BACKEND_URL}/api/auth/login",
-        json={"email": "admin@example.com", "password": "admin1234"},
+        json={"email": "admin@example.com", "password": "admin1234"},  # pragma: allowlist secret
         timeout=10,
     )
     assert r.status_code == 200, r.text

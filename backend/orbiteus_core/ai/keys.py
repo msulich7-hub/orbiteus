@@ -23,10 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 def _fernet() -> Fernet:
-    key = (settings.ai_secret_key or "").encode("utf-8")
-    if not key or key == b"change-me-with-fernet-key":
+    raw = (settings.ai_secret_key or "").strip()
+    if not raw or raw == "change-me-with-fernet-key":
         raise RuntimeError("AI_SECRET_KEY is unset; cannot read/write AI credentials")
-    return Fernet(key)
+    key = raw.encode("utf-8")
+    try:
+        return Fernet(key)
+    except ValueError as exc:
+        raise RuntimeError(
+            "AI_SECRET_KEY is not a valid Fernet key; set a value from "
+            "Fernet.generate_key().decode() (placeholder values from .env are rejected)."
+        ) from exc
 
 
 def encrypt(secret: str) -> bytes:

@@ -52,6 +52,15 @@ def test_fernet_refuses_default_key():
         keys_mod._fernet()
 
 
+def test_fernet_rejects_invalid_development_like_key(monkeypatch):
+    """CI sets AI_SECRET_KEY to a dev placeholder; refuse with RuntimeError, not ValueError."""
+    monkeypatch.setenv("AI_SECRET_KEY", "change-me-in-development")
+    sys.modules.pop("orbiteus_core.config", None)
+    keys_mod = _load("orbiteus_keys_dev_placeholder_test", BACKEND / "orbiteus_core" / "ai" / "keys.py")
+    with pytest.raises(RuntimeError, match="not a valid Fernet key"):
+        keys_mod._fernet()
+
+
 # ---------------------------------------------------------------------------
 # Provider abstraction
 # ---------------------------------------------------------------------------

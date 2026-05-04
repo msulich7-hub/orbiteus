@@ -70,7 +70,7 @@ async def test_auth_password_reset_short_password_400(client):
     bogus = create_password_reset_token(uuid.uuid4())
     r = await client.post(
         "/api/auth/password/reset",
-        json={"token": bogus, "new_password": "tiny"},
+        json={"token": bogus, "new_password": "tiny"},  # pragma: allowlist secret
     )
     assert r.status_code == 400
 
@@ -79,7 +79,7 @@ async def test_auth_password_reset_short_password_400(client):
 async def test_auth_password_reset_garbage_token_401(client):
     r = await client.post(
         "/api/auth/password/reset",
-        json={"token": "not.a.jwt", "new_password": "Long-enough-1"},
+        json={"token": "not.a.jwt", "new_password": "Long-enough-1"},  # pragma: allowlist secret
     )
     assert r.status_code == 401
 
@@ -405,7 +405,7 @@ async def test_register_endpoint_rejects_disabled_public_registration(client):
         "/api/auth/register",
         json={
             "email": unique_email("smoke"),
-            "password": "test1234",
+            "password": "test1234",  # pragma: allowlist secret
             "name": "Smoke",
             "tenant_name": f"Smoke {nonce}",
             "tenant_slug": unique_slug("smoke"),
@@ -451,21 +451,21 @@ async def test_auth_login_with_password_reset_round_trip(client):
 
     r = await client.post(
         "/api/auth/password/reset",
-        json={"token": token, "new_password": "Brand-new-9999"},
+        json={"token": token, "new_password": "Brand-new-9999"},  # pragma: allowlist secret
     )
     assert r.status_code == 200
 
     # New password works.
     r = await client.post(
         "/api/auth/login",
-        json={"email": email, "password": "Brand-new-9999"},
+        json={"email": email, "password": "Brand-new-9999"},  # pragma: allowlist secret
     )
     assert r.status_code == 200
 
     # Re-using the token returns 401 (single-use).
     r = await client.post(
         "/api/auth/password/reset",
-        json={"token": token, "new_password": "Yet-another-1234"},
+        json={"token": token, "new_password": "Yet-another-1234"},  # pragma: allowlist secret
     )
     assert r.status_code == 401
 
@@ -477,7 +477,7 @@ async def test_auth_register_duplicate_slug_409(client):
 
     payload_a = {
         "email": unique_email("slug_a"),
-        "password": "test1234",
+        "password": "test1234",  # pragma: allowlist secret
         "name": "A",
         "tenant_name": "Slug A",
         "tenant_slug": slug,
@@ -487,7 +487,7 @@ async def test_auth_register_duplicate_slug_409(client):
 
     payload_b = {
         "email": unique_email("slug_b"),
-        "password": "test1234",
+        "password": "test1234",  # pragma: allowlist secret
         "name": "B",
         "tenant_name": "Slug B",
         "tenant_slug": slug,
@@ -545,7 +545,7 @@ async def test_base_webhook_full_crud(client):
         json={
             "name": f"cov hook {nonce}",
             "url": f"https://test.local/h/{nonce}",
-            "secret": "shhh",
+            "secret": "shhh",  # pragma: allowlist secret
             "event_mask": ["record.updated"],
             "model_filter": "crm.lead",
             "field_filter": [],
