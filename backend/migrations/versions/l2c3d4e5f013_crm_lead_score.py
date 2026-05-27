@@ -19,17 +19,21 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _has_column(insp: sa.Inspector, table: str, column: str) -> bool:
+    return column in {c["name"] for c in insp.get_columns(table)}
+
+
 def _add_score_columns(table: str) -> None:
     bind = op.get_bind()
     insp = sa.inspect(bind)
     if not insp.has_table(table):
         return
-    if not insp.has_column(table, "score"):
+    if not _has_column(insp, table, "score"):
         op.add_column(
             table,
             sa.Column("score", sa.Integer(), server_default="0", nullable=False),
         )
-    if not insp.has_column(table, "score_updated_at"):
+    if not _has_column(insp, table, "score_updated_at"):
         op.add_column(
             table,
             sa.Column("score_updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -65,16 +69,16 @@ def downgrade() -> None:
         existing = {idx["name"] for idx in insp.get_indexes("crm_prospects")}
         if "ix_crm_prospects_tenant_score" in existing:
             op.drop_index("ix_crm_prospects_tenant_score", table_name="crm_prospects")
-        if insp.has_column("crm_prospects", "score_updated_at"):
+        if _has_column(insp, "crm_prospects", "score_updated_at"):
             op.drop_column("crm_prospects", "score_updated_at")
-        if insp.has_column("crm_prospects", "score"):
+        if _has_column(insp, "crm_prospects", "score"):
             op.drop_column("crm_prospects", "score")
 
     if insp.has_table("crm_leads"):
         existing = {idx["name"] for idx in insp.get_indexes("crm_leads")}
         if "ix_crm_leads_tenant_score" in existing:
             op.drop_index("ix_crm_leads_tenant_score", table_name="crm_leads")
-        if insp.has_column("crm_leads", "score_updated_at"):
+        if _has_column(insp, "crm_leads", "score_updated_at"):
             op.drop_column("crm_leads", "score_updated_at")
-        if insp.has_column("crm_leads", "score"):
+        if _has_column(insp, "crm_leads", "score"):
             op.drop_column("crm_leads", "score")
