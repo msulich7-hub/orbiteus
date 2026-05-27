@@ -30,7 +30,7 @@ REQUIRED_TOP = [
 ]
 
 REQUIRED_NUMBERED = list(range(1, 37))  # 01..36
-REQUIRED_ADR_IDS = list(range(1, 18))   # 0001..0017
+REQUIRED_ADR_IDS = list(range(1, 19))   # 0001..0018
 REQUIRED_ADR_TOP = [
     ADR / "README.md",
     ADR / "_template.md",

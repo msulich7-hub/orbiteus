@@ -98,4 +98,4 @@ Macierz: BIS/CIE/BAZ × S (5.5 kg) / M (15 kg) / L (31 kg). PDF: `dpd-label-{way
 | `lib/carrier_registry.py` | `SHIPPING_DPD_NATIVE` |
 | `scripts/dpd_orbiteus_smoke.py` | smoke 9/9 |
 
-Rollout VM: [TASK-DPD-NATIVE-VM.md](./TASK-DPD-NATIVE-VM.md)
+Rollout VM: run `backend/scripts/dpd_orbiteus_smoke.py` after setting `DPD_*` in `.env` (see `.env.shipping.example`).
