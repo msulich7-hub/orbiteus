@@ -6,13 +6,16 @@ and open-mercato/packages/carrier-*/lib/preset.ts — do not invent new names.
 
 MANIFEST = {
     "name": "Shipping",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "depends_on": ["base", "auth"],
     "layer": "product",
     "description": "Carrier label dispatch, routing, shipment tracking.",
     "models": [
         "shipping.shipment",
         "shipping.ifs_queue",
+        "shipping.dispatch",
+        "shipping.waybill",
+        "shipping.handling_unit",
     ],
     "category": "Logistics",
     "auto_install": False,
@@ -34,6 +37,7 @@ MANIFEST = {
             "parent": "Logistyka",
             "sequence": 20,
             "model": "shipping.ifs_queue",
+            "url": "/shipping/ifs_queue?view=inbox",
         },
     ],
     "view_config": "modules.shipping.view.config",

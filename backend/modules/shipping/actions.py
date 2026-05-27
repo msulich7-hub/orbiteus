@@ -4,6 +4,18 @@ from orbiteus_core.ai import Action, ActionCategory
 
 ACTIONS = [
     Action(
+        id="shipping.ifs_kiosk.open",
+        label="Otwórz kiosk wysyłki IFS",
+        keywords=["kiosk", "ifs", "dispatch", "etykieta"],
+        description="Przejdź do skrzynki IFS (kiosk multi-waybill)",
+        category=ActionCategory.NAVIGATE,
+        target="navigate",
+        target_url="/shipping/ifs_queue?view=inbox",
+        requires_feature="shipping.ifs_queue.read",
+        icon="layout-kanban",
+    ),
+
+    Action(
         id="shipping.shipment.list",
         label="Przesyłki",
         keywords=["shipping", "przesyłki", "logistyka", "waybill"],
@@ -21,7 +33,7 @@ ACTIONS = [
         description="Przesyłki z IFS (ingress SECONDARY) oczekujące na dispatch",
         category=ActionCategory.NAVIGATE,
         target="navigate",
-        target_url="/shipping/ifs_queue",
+        target_url="/shipping/ifs_queue?view=inbox",
         requires_feature="shipping.ifs_queue.read",
         icon="inbox",
     ),

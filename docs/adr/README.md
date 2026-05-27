@@ -29,3 +29,4 @@ Use the structure in [`_template.md`](./_template.md) for new ADRs.
 | 0015 | [No Temporal in MVP](./0015-no-temporal-in-mvp.md) | Accepted |
 | 0016 | [npm workspaces with packages/ui](./0016-npm-workspaces-with-packages-ui.md) | Superseded |
 | 0017 | [httpOnly cookie session for the Admin UI (no FOAC)](./0017-httponly-cookie-session.md) | Accepted |
+| 0018 | [Shipping is pack station / TMS — not WMS](./0018-shipping-pack-station-not-wms.md) | Accepted |

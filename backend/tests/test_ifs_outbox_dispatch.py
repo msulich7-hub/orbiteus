@@ -86,4 +86,37 @@ async def test_dispatch_from_ifs_queue_returns_processing() -> None:
 
     assert result["state"] == "processing"
     assert result["ifs_shipment_id"] == "900123"
-    queue_repo.mark_state.assert_awaited_with("900123", state="processing")
+    queue_repo.mark_state.assert_awaited_with("900123", state="in_dispatch")
+
+
+@pytest.mark.asyncio
+async def test_enqueue_waybill_dispatch_payload() -> None:
+    session = AsyncMock()
+    ctx = MagicMock()
+    ctx.tenant_id = uuid.uuid4()
+    waybill_id = uuid.uuid4()
+    dispatch_id = uuid.uuid4()
+
+    with patch("modules.shipping.controller.services.enqueue", new_callable=AsyncMock) as mock_enqueue:
+        mock_enqueue.return_value = uuid.uuid4()
+        from modules.shipping.controller.services import enqueue_label_dispatch
+
+        outbox_id = await enqueue_label_dispatch(
+            session,
+            ctx,
+            payload={
+                "tenant_id": str(ctx.tenant_id),
+                "waybill_id": str(waybill_id),
+                "dispatch_id": str(dispatch_id),
+                "ifs_shipment_id": "900123",
+                "order_id": str(uuid.uuid4()),
+                "carrier_code": "MOCK",
+                "source": "kiosk",
+            },
+            target_ref="900123:1",
+        )
+
+    call_kwargs = mock_enqueue.await_args.kwargs
+    assert call_kwargs["target_ref"] == "900123:1"
+    assert call_kwargs["payload"]["waybill_id"] == str(waybill_id)
+    assert outbox_id is not None

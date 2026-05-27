@@ -15,6 +15,8 @@ IFS_TENANT_SLUG_KEY = "shipping.ifs_tenant_slug"
 
 async def on_install(session: AsyncSession, ctx: RequestContext) -> None:
     """Seed global config for IFS ingest tenant resolution."""
+    import modules.shipping.ai  # noqa: F401 — register AIModuleConfig
+
     from modules.base.controller.repositories import IrConfigParamRepository
 
     repo = IrConfigParamRepository(session, ctx)

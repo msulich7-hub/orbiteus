@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
 
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="tasks.shipping_tasks.dispatch_shipping_label")
 def dispatch_shipping_label() -> None:
-    """Legacy sync entry — prefer outbox drainer calling dispatch_shipping_label_async."""
     logger.warning("dispatch_shipping_label called without payload — use outbox drainer")
 
 
@@ -23,13 +21,14 @@ async def dispatch_shipping_label_async(
     payload: dict,
     target_ref: str | None = None,
 ) -> None:
-    """Execute carrier label creation from an outbox row (idempotent)."""
     from orbiteus_core.context import RequestContext
     from orbiteus_core.db import AsyncSessionFactory
 
     from modules.shipping.controller.services import (
         execute_dispatch_for_order,
+        execute_dispatch_for_waybill,
         execute_dispatch_from_ifs_queue,
+        finalize_dispatch_queue_state,
     )
 
     tenant_raw = payload.get("tenant_id")
@@ -40,12 +39,35 @@ async def dispatch_shipping_label_async(
     ctx = RequestContext(actor="system", tenant_id=tenant_id, is_superadmin=True)
 
     async with AsyncSessionFactory() as session:
-        ifs_shipment_id = payload.get("ifs_shipment_id")
-        if ifs_shipment_id:
+        if payload.get("waybill_id"):
+            wb = await execute_dispatch_for_waybill(
+                session,
+                ctx,
+                waybill_id=uuid.UUID(str(payload["waybill_id"])),
+                order_id=uuid.UUID(str(payload["order_id"])),
+                carrier_code=payload.get("carrier_code"),
+                ifs_payload=payload.get("ifs_payload"),
+                packages=payload.get("packages"),
+                weight_kg=float(payload.get("weight_kg") or 0),
+                is_pallet_flag=payload.get("is_pallet"),
+                forward_agent_id=payload.get("forward_agent_id") or "",
+            )
+            if payload.get("dispatch_id") and payload.get("ifs_shipment_id"):
+                await finalize_dispatch_queue_state(
+                    session,
+                    ctx,
+                    uuid.UUID(str(payload["dispatch_id"])),
+                    str(payload["ifs_shipment_id"]),
+                )
+            logger.info(
+                "shipping.waybill.dispatched",
+                extra={"waybill_id": str(wb.id), "state": wb.state, "target_ref": target_ref},
+            )
+        elif payload.get("ifs_shipment_id") and not payload.get("dispatch_body"):
             await execute_dispatch_from_ifs_queue(
                 session,
                 ctx,
-                str(ifs_shipment_id),
+                str(payload["ifs_shipment_id"]),
                 order_id=uuid.UUID(str(payload["order_id"])),
                 force_carrier=payload.get("force_carrier"),
             )
@@ -64,6 +86,7 @@ async def dispatch_shipping_label_async(
         extra={
             "event": event,
             "ifs_shipment_id": payload.get("ifs_shipment_id"),
+            "waybill_id": payload.get("waybill_id"),
             "target_ref": target_ref,
         },
     )

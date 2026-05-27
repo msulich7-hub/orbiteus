@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,12 @@ from orbiteus_core.context import RequestContext
 from orbiteus_core.integrations.system_context import system_tenant_context
 from orbiteus_core.outbox import enqueue
 
-from modules.shipping.controller.repositories import IfsQueueRepository, ShipmentRepository
+from modules.shipping.controller.repositories import (
+    DispatchRepository,
+    IfsQueueRepository,
+    ShipmentRepository,
+    WaybillRepository,
+)
 from modules.shipping.lib.carrier_registry import adapter_for, normalize_carrier_code
 from modules.shipping.lib.carrier_settings import get_carrier_settings
 from modules.shipping.lib.ifs_inbound_adapter import get_ifs_inbound_port
@@ -23,7 +29,7 @@ from modules.shipping.lib.ifs_inbound_mapper import (
 from modules.shipping.lib.ifs_logistics_types import IfsLogisticsPayload
 from modules.shipping.lib.ifs_packaging import is_pallet
 from modules.shipping.lib.routing import resolve_carrier_for_shipment
-from modules.shipping.model.domain import Shipment
+from modules.shipping.model.domain import Shipment, Waybill
 from modules.shipping.model.schemas import DispatchBody, IfsQueueDispatchBody, SimulateBody
 
 SHIPPING_LABEL_TARGET = "shipping_label"
@@ -51,7 +57,6 @@ async def enqueue_label_dispatch(
     payload: dict[str, Any],
     target_ref: str | None = None,
 ) -> uuid.UUID:
-    """Persist outbox row in the same transaction as queue/shipment updates."""
     return await enqueue(
         session,
         tenant_id=ctx.tenant_id,
@@ -67,7 +72,6 @@ async def execute_dispatch_for_order(
     ctx: RequestContext,
     body: DispatchBody,
 ) -> Shipment:
-    """Create shipment + label — called only from Celery worker."""
     repo = ShipmentRepository(session, ctx)
     carrier = (
         normalize_carrier_code(body.force_carrier)
@@ -146,7 +150,6 @@ async def dispatch_for_order(
     ctx: RequestContext,
     body: DispatchBody,
 ) -> dict[str, Any]:
-    """Queue label creation via outbox (HTTP handler — no sync carrier HTTP)."""
     outbox_id = await enqueue_label_dispatch(
         session,
         ctx,
@@ -164,6 +167,114 @@ def _parse_queue_payload(payload_json: str) -> IfsLogisticsPayload:
     return IfsLogisticsPayload.model_validate(data)
 
 
+def _is_pallet_from_packages(packages: list[dict]) -> bool:
+    if not packages:
+        return False
+    flags = [is_pallet(p.get("pack_type") or "") for p in packages]
+    return all(flags) and any(flags)
+
+
+async def execute_dispatch_for_waybill(
+    session: AsyncSession,
+    ctx: RequestContext,
+    *,
+    waybill_id: uuid.UUID,
+    order_id: uuid.UUID,
+    carrier_code: str | None = None,
+    ifs_payload: dict | None = None,
+    packages: list[dict] | None = None,
+    weight_kg: float = 0.0,
+    is_pallet_flag: bool | None = None,
+    forward_agent_id: str = "",
+) -> Waybill:
+    wb_repo = WaybillRepository(session, ctx)
+    waybill = await wb_repo.get(waybill_id)
+    if waybill.state == "label_created":
+        return waybill
+
+    dispatch_repo = DispatchRepository(session, ctx)
+    dispatch = await dispatch_repo.get(waybill.dispatch_id)
+    carrier = normalize_carrier_code(carrier_code or waybill.carrier_code)
+
+    cfg = get_carrier_settings()
+    if not cfg.carrier_configured(carrier):
+        return await wb_repo.update(
+            waybill.id,
+            {
+                "state": "failed",
+                "error_message": f"Carrier {carrier} not configured in env",
+            },
+        )
+
+    pack_list = packages or []
+    pallet = (
+        is_pallet_flag
+        if is_pallet_flag is not None
+        else _is_pallet_from_packages(pack_list)
+    )
+
+    try:
+        adapter = adapter_for(carrier)
+        dispatch_payload: dict = {
+            "order_id": str(order_id),
+            "weight_kg": weight_kg,
+            "reference": dispatch.ifs_shipment_id,
+            "is_pallet": pallet,
+            "is_locker": False,
+            "forward_agent_id": forward_agent_id,
+        }
+        if ifs_payload and pack_list:
+            dispatch_payload["ifs_payload"] = ifs_payload
+            dispatch_payload["packages"] = pack_list
+
+        result = await adapter.create_label(dispatch_payload)
+        return await wb_repo.update(
+            waybill.id,
+            {
+                "state": "label_created",
+                "tracking_number": result.get("tracking_number") or "",
+                "label_payload_json": json.dumps(result),
+                "label_created_at": datetime.now(timezone.utc),
+                "error_message": "",
+            },
+        )
+    except NotImplementedError as exc:
+        return await wb_repo.update(
+            waybill.id,
+            {"state": "failed", "error_message": str(exc)},
+        )
+    except Exception as exc:  # noqa: BLE001
+        return await wb_repo.update(
+            waybill.id,
+            {"state": "failed", "error_message": str(exc)},
+        )
+
+
+async def finalize_dispatch_queue_state(
+    session: AsyncSession,
+    ctx: RequestContext,
+    dispatch_id: uuid.UUID,
+    ifs_shipment_id: str,
+) -> None:
+    wb_repo = WaybillRepository(session, ctx)
+    waybills = await wb_repo.list_for_dispatch(dispatch_id)
+    if not waybills:
+        return
+    states = {w.state for w in waybills}
+    queue_repo = IfsQueueRepository(session, ctx)
+    dispatch_repo = DispatchRepository(session, ctx)
+    if states <= {"label_created", "cancelled"} and "label_created" in states:
+        await queue_repo.mark_state(ifs_shipment_id, state="completed")
+        await dispatch_repo.update(dispatch_id, {"state": "ready_to_print"})
+    elif "failed" in states:
+        await queue_repo.mark_state(
+            ifs_shipment_id,
+            state="failed",
+            error_message="One or more waybills failed",
+        )
+        await dispatch_repo.update(dispatch_id, {"state": "partial_labels"})
+
+
 async def ingest_ifs_webhook(
     session: AsyncSession,
     raw: dict,
@@ -171,7 +282,6 @@ async def ingest_ifs_webhook(
     ifs_sid: str,
     request_id: str | None = None,
 ):
-    """Ingest Oracle webhook — actor=system, tenant from config, audited upsert."""
     ctx = await system_tenant_context(session, request_id=request_id)
     event = get_ifs_inbound_port().parse_webhook(raw, ifs_sid=ifs_sid)
     repo = IfsQueueRepository(session, ctx)
@@ -195,7 +305,7 @@ async def ingest_ifs_webhook(
             },
             target_ref=event.shipment_id,
         )
-        await repo.mark_state(event.shipment_id, state="processing")
+        await repo.mark_state(event.shipment_id, state="in_dispatch")
 
     return row
 
@@ -225,6 +335,7 @@ async def list_ifs_queue(
                 "ifs_sid": row.ifs_sid,
                 "objstate": row.objstate,
                 "state": row.state,
+                "dispatch_id": row.dispatch_id,
                 "payload_json": row.payload_json,
                 "error_message": row.error_message,
                 "order_no": payload.order_no if payload else None,
@@ -246,10 +357,9 @@ async def execute_dispatch_from_ifs_queue(
     order_id: uuid.UUID,
     force_carrier: str | None = None,
 ) -> Shipment:
-    """Worker-only: create label from queued IFS payload."""
     queue_repo = IfsQueueRepository(session, ctx)
     row = await queue_repo.get_by_ifs_shipment_id(ifs_shipment_id)
-    if row.state == "dispatched":
+    if row.state in ("dispatched", "completed"):
         raise ValueError(f"IFS queue {ifs_shipment_id} already dispatched")
 
     payload = _parse_queue_payload(row.payload_json)
@@ -260,7 +370,7 @@ async def execute_dispatch_from_ifs_queue(
     dispatch_body = DispatchBody(
         order_id=order_id,
         weight_kg=float(payload.total_weight_kg or 0),
-        is_pallet=is_pallet(first_pack) if first_pack else False,
+        is_pallet=is_pallet(first_pack) if first_pack else _is_pallet_from_packages(packages),
         forward_agent_id=payload.forward_agent_id or "",
         force_carrier=force_carrier,
         ifs_payload=ifs_payload,
@@ -269,7 +379,7 @@ async def execute_dispatch_from_ifs_queue(
 
     shipment = await execute_dispatch_for_order(session, ctx, dispatch_body)
     if shipment.state == "label_created":
-        await queue_repo.mark_state(ifs_shipment_id, state="dispatched")
+        await queue_repo.mark_state(ifs_shipment_id, state="completed")
     elif shipment.state == "failed":
         await queue_repo.mark_state(
             ifs_shipment_id,
@@ -285,10 +395,9 @@ async def dispatch_from_ifs_queue(
     ifs_shipment_id: str,
     body: IfsQueueDispatchBody,
 ) -> dict[str, Any]:
-    """HTTP: enqueue async label dispatch (no carrier HTTP in request)."""
     queue_repo = IfsQueueRepository(session, ctx)
     await queue_repo.get_by_ifs_shipment_id(ifs_shipment_id)
-    await queue_repo.mark_state(ifs_shipment_id, state="processing")
+    await queue_repo.mark_state(ifs_shipment_id, state="in_dispatch")
 
     outbox_id = await enqueue_label_dispatch(
         session,
