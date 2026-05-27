@@ -1,4 +1,4 @@
-"""CRM AIModuleConfig — declarative AI surface (PR 9, canonical example)."""
+"""CRM AIModuleConfig — Pipedrive-class assistant surface."""
 from __future__ import annotations
 
 import uuid
@@ -14,40 +14,36 @@ AI = AIModuleConfig(
     enabled=True,
     system_prompt=(
         "You are the CRM assistant for {{ tenant.name }}. "
-        "Always cite source records as `<model>.<id>` when referring to specific "
-        "leads or persons. Honour RBAC; never widen access on behalf of the user."
+        "Deals live in pipelines (crm.lead); pre-pipeline items are crm.prospect. "
+        "Cite records as `<model>.<id>`. Honour RBAC."
     ),
-    accessible_models=["crm.person", "crm.lead", "crm.stage", "crm.team"],
+    accessible_models=[
+        "crm.organization",
+        "crm.pipeline",
+        "crm.person",
+        "crm.lead",
+        "crm.prospect",
+        "crm.stage",
+        "crm.team",
+        "crm.activity",
+    ],
     callable_actions=[
         "crm.person.create",
         "crm.lead.create",
         "crm.lead.move_stage",
+        "crm.prospect.create",
     ],
-    embed_models=["crm.person", "crm.lead"],
+    embed_models=["crm.person", "crm.lead", "crm.organization", "crm.prospect"],
     suggested_prompts=[
-        PromptTemplate(id="hot_leads", label="Hot leads this week"),
+        PromptTemplate(id="hot_leads", label="Hot deals this week"),
         PromptTemplate(id="weekly_summary", label="Weekly team summary"),
-        PromptTemplate(id="rotting", label="Leads stuck > 14 days"),
+        PromptTemplate(id="rotting", label="Deals stuck beyond rotting threshold"),
+        PromptTemplate(id="prospect_inbox", label="Open prospects in inbox"),
     ],
     dashboard=True,
 )
 
-# Register at import time so module bootstrap picks it up automatically.
 ai_registry.register("crm", AI)
-
-
-# ---------------------------------------------------------------------------
-# AI tool dispatchers (DoD §8.10) — Python handlers that execute the
-# `callable_actions` declared above when the model invokes them.
-#
-# Every handler:
-#   * receives the SAME `session` + `ctx` the chat request runs under
-#     (no elevated AI context),
-#   * forwards to the canonical service / repository function so RBAC,
-#     tenant filter, and audit row apply automatically,
-#   * returns a JSON-serialisable dict for the chat layer to surface in
-#     `tool_results`.
-# ---------------------------------------------------------------------------
 
 
 async def _crm_lead_move_stage(
@@ -55,13 +51,6 @@ async def _crm_lead_move_stage(
     ctx: RequestContext,
     arguments: dict[str, Any],
 ) -> dict[str, Any]:
-    """Move a `crm.lead` to a different `crm.stage`.
-
-    Validates UUID inputs strictly. Re-raising would propagate as
-    `ai.dispatcher.handler_failed` from the dispatcher; we let
-    UUID parsing errors flow up so the AI sees the failure shape
-    on the next turn.
-    """
     from modules.crm.controller.services import move_lead_to_stage
 
     lead_id = uuid.UUID(str(arguments["id"]))

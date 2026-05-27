@@ -1,8 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  type DragStartEvent, type DragEndEvent, closestCorners,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragStartEvent,
+  type DragEndEvent,
+  closestCorners,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy, useSortable,
@@ -92,6 +99,8 @@ function KanbanColumn({ group, items, titleField, subtitleFields, activeId }: {
   subtitleFields?: Props["subtitleFields"];
   activeId: string | null;
 }) {
+  const { setNodeRef, isOver } = useDroppable({ id: group.id });
+
   return (
     <Stack gap="xs" style={{ minWidth: 260, maxWidth: 300, flex: "0 0 280px" }}>
       <Paper p="xs">
@@ -113,8 +122,15 @@ function KanbanColumn({ group, items, titleField, subtitleFields, activeId }: {
         </Group>
       </Paper>
       <Paper
+        ref={setNodeRef}
         p="xs"
-        style={{ minHeight: 120, background: "var(--mantine-color-default-hover)" }}
+        style={{
+          minHeight: 120,
+          background: isOver
+            ? "var(--mantine-color-blue-light)"
+            : "var(--mantine-color-default-hover)",
+          outline: isOver ? "2px dashed var(--mantine-color-blue-5)" : undefined,
+        }}
       >
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <Stack gap="xs">
@@ -227,7 +243,7 @@ export default function ResourceKanban({
 
     const sourceGroup = findGroupForItem(itemId);
     // overId might be a group id or another item id — find target group
-    const targetGroup = columns[overId] !== undefined
+    const targetGroup = groups.some((g) => g.id === overId)
       ? overId
       : findGroupForItem(overId);
 

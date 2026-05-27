@@ -1,0 +1,31 @@
+<views>
+
+  <view name="crm.queue.list" model="crm.queue" type="list" priority="16">
+    <list>
+      <field name="name" string="Queue"/>
+      <field name="model_name" string="Model"/>
+      <field name="sequence" string="Order"/>
+      <field name="is_shared" string="Shared"/>
+      <field name="user_id" string="Owner" widget="many2one"/>
+    </list>
+  </view>
+
+  <view name="crm.queue.form" model="crm.queue" type="form" priority="16">
+    <form>
+      <sheet>
+        <group string="Work queue">
+          <field name="name"/>
+          <field name="model_name"/>
+          <field name="sequence"/>
+          <field name="is_shared"/>
+          <field name="user_id" widget="many2one"/>
+        </group>
+        <group string="Filter &amp; sort">
+          <field name="domain_json" widget="json"/>
+          <field name="sort_json" widget="json"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+
+</views>

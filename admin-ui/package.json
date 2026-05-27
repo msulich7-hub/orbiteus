@@ -13,7 +13,9 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:crm": "playwright test e2e/crm-suite.spec.ts --project=crm",
+    "e2e:demo": "playwright test e2e/crm-demo-video.spec.ts --project=crm-demo"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

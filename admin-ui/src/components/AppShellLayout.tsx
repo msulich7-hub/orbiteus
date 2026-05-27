@@ -43,8 +43,21 @@ function modelHref(moduleName: string, modelName: string): string {
   const segment = modelName.startsWith(`${moduleName}.`)
     ? modelName.slice(moduleName.length + 1)
     : modelName;
+  const key = `${moduleName}.${segment}`;
+  const CRM_HREFS: Record<string, string> = {
+    "crm.lead": "/crm/lead?view=kanban",
+    "crm.prospect": "/crm/prospect?filter=inbox",
+    "crm.activity": "/crm/activity?filter=today",
+  };
+  if (CRM_HREFS[key]) return CRM_HREFS[key];
   return `/${moduleName}/${segment}`;
 }
+
+/** Nav models hidden from sidebar (admin-only or redundant). */
+const HIDDEN_MODELS = new Set([
+  "crm.stage_history",
+  "crm.automation_rule",
+]);
 
 function modelLabel(modelName: string): string {
   const last = modelName.split(".").pop() ?? modelName;
@@ -98,7 +111,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   // Show only non-system modules that have at least one model with views defined
   const dynamicSections = modules
     .filter((mod) => !HIDDEN_MODULES.has(mod.name))
-    .map((mod) => ({ ...mod, models: mod.models.filter((m) => m.fields.length > 0) }))
+    .map((mod) => ({ ...mod, models: mod.models.filter((m) => m.fields.length > 0 && !HIDDEN_MODELS.has(m.name)) }))
     .filter((mod) => mod.models.length > 0);
 
   return (
@@ -187,13 +200,14 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
                   </Text>
                   {mod.models.map((model) => {
                     const href = modelHref(mod.name, model.name);
+                    const pathBase = href.split("?")[0];
                     return (
                       <NavLink
                         key={model.name}
                         component={Link} href={href}
                         label={modelLabel(model.name)}
                         leftSection={<ModIcon size={16} stroke={1.5} />}
-                        active={path.startsWith(href)}
+                        active={path === pathBase || path.startsWith(`${pathBase}/`)}
                         variant="filled"
                         styles={{ root: { borderRadius: "var(--mantine-radius-sm)" } }}
                       />

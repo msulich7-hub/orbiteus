@@ -16,6 +16,10 @@ import {
 import {
   IconBriefcase,
   IconCash,
+  IconFlame,
+  IconInbox,
+  IconLayoutKanban,
+  IconCalendarEvent,
   IconTrendingUp,
   IconTrophy,
   IconUsers,
@@ -31,6 +35,8 @@ interface CrmStats {
   won_leads: number;
   pipeline_value: number;
   won_revenue: number;
+  open_prospects?: number;
+  rotting_leads?: number;
 }
 
 export default function DashboardHome() {
@@ -63,6 +69,40 @@ export default function DashboardHome() {
     );
   }
 
+  const quickActions = [
+    {
+      label: "Pipeline Kanban",
+      description: "Drag deals across stages",
+      icon: IconLayoutKanban,
+      color: "blue",
+      href: "/crm/lead?view=kanban",
+      badge: stats.total_leads > 0 ? String(stats.total_leads) : undefined,
+    },
+    {
+      label: "Rotting deals",
+      description: "Deals stuck too long in stage",
+      icon: IconFlame,
+      color: "orange",
+      href: "/crm/lead?filter=rotting",
+      badge: stats.rotting_leads != null ? String(stats.rotting_leads) : undefined,
+    },
+    {
+      label: "Today's activities",
+      description: "Tasks and calls due today",
+      icon: IconCalendarEvent,
+      color: "violet",
+      href: "/crm/activity?filter=today",
+    },
+    {
+      label: "Prospect inbox",
+      description: "Unconverted pre-pipeline leads",
+      icon: IconInbox,
+      color: "cyan",
+      href: "/crm/prospect?filter=inbox",
+      badge: stats.open_prospects != null ? String(stats.open_prospects) : undefined,
+    },
+  ] as const;
+
   const cards = [
     {
       label: "Persons",
@@ -76,7 +116,7 @@ export default function DashboardHome() {
       value: String(stats.total_leads),
       icon: IconBriefcase,
       color: "cyan",
-      href: "/crm/lead",
+      href: "/crm/lead?view=kanban",
     },
     {
       label: "Won leads",
@@ -90,7 +130,7 @@ export default function DashboardHome() {
       value: formatMoney(stats.pipeline_value),
       icon: IconTrendingUp,
       color: "grape",
-      href: "/crm/lead",
+      href: "/crm/lead?view=kanban",
     },
     {
       label: "Won revenue",
@@ -110,6 +150,42 @@ export default function DashboardHome() {
           <Text span ff="monospace" size="xs">GET /api/crm/stats</Text>
         </Text>
       </div>
+
+      <Stack gap="xs">
+        <Text size="sm" fw={600}>Quick actions</Text>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+          {quickActions.map((action) => (
+            <Paper
+              key={action.label}
+              component={Link}
+              href={action.href}
+              p="md"
+              radius="md"
+              withBorder
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Group justify="space-between" align="flex-start" wrap="nowrap">
+                <Stack gap={4} style={{ minWidth: 0 }}>
+                  <Text size="sm" fw={700}>
+                    {action.label}
+                  </Text>
+                  <Text size="xs" c="dimmed" lineClamp={2}>
+                    {action.description}
+                  </Text>
+                  {action.badge != null && (
+                    <Text size="lg" fw={700} mt={4}>
+                      {action.badge}
+                    </Text>
+                  )}
+                </Stack>
+                <ThemeIcon size={40} radius="md" variant="light" color={action.color}>
+                  <action.icon size={22} stroke={1.5} />
+                </ThemeIcon>
+              </Group>
+            </Paper>
+          ))}
+        </SimpleGrid>
+      </Stack>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
         {cards.map((c) => (

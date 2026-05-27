@@ -1,57 +1,55 @@
-# `crm` module — spec (canonical)
+# Module: crm — Pipedrive-class extensions
 
-> **Superseded by `docs/`.** Authoritative documentation lives in the
-> top-level chapters. Pointers below.
->
-> **Canonical sources:**
-> - `docs/26-canonical-crm.md` — full design & rationale
-> - `docs/adr/0008-crm-mvp-rename-person-lead-stage-team.md` — naming
-> - `docs/15-ai-layer.md` — `ai.py` declaration
-> - `docs/16-ai-recipes.md` — embedding the prompt input
+> **Layer:** product  
+> **depends_on:** [base, auth]  
+> **Status:** in development (v0.4.0 — SPEC-001..008)  
+> **Specs (Testorbiteka):** SPEC-001..008 in `Testorbiteka/docs/specs/`
 
 ## Purpose
 
-CRM is the engine's *canonical product example* — the smallest realistic
-business module that exercises every framework primitive (auto-CRUD,
-RBAC, Audit, EventBus, Outbox, Realtime, AI layer, dynamic admin
-renderer with list/kanban/calendar views). It is **not** meant to be a
-production-grade CRM out of the box.
+Extend canonical CRM into a **Pipedrive-competitive** foundation:
+
+| Spec | Feature |
+|------|---------|
+| 001 | `crm.organization` + contact link |
+| 002 | `crm.pipeline` multi-pipeline |
+| 003 | `crm.prospect` inbox → convert to deal |
+| 004 | `crm.activity` execution layer |
+| 005 | rotting + `crm.stage_history` |
+| 008 | lifecycle stages + UTM attribution on prospect/lead |
 
 ## Models
 
-| Domain class | Table          | Purpose                                    |
-|--------------|----------------|--------------------------------------------|
-| `Person`     | `crm_persons`  | Contacts (`kind` enum: customer / vendor / partner / individual) |
-| `Lead`       | `crm_leads`    | Sales opportunities tied to a `Person` and a `Stage` |
-| `Stage`      | `crm_stages`   | Pipeline columns (Open → Qualified → Won / Lost) |
-| `Team`       | `crm_teams`    | Sales teams (membership = list of users)   |
+See `model/domain.py` — 9 domain entities.
 
-`Person` and `Lead` carry the standard `BaseModel` columns
-(`tenant_id`, `created_at`, `updated_at`, `created_by_id`,
-`modified_by_id`, `is_deleted`).
+## Custom endpoints
 
-## Endpoints
+| Method | Path |
+|--------|------|
+| GET | `/api/crm/leads/kanban?pipeline_id=` |
+| POST | `/api/crm/lead/{id}/move` |
+| PATCH | `/api/crm/lead/{id}/lifecycle?stage=` |
+| POST | `/api/crm/prospect/{id}/convert` |
+| GET | `/api/crm/leads/rotting` |
+| GET | `/api/crm/lead/{id}/stage-history` |
+| GET | `/api/crm/activities/today` |
+| POST | `/api/crm/activity/{id}/done` |
+| GET | `/api/crm/stats` |
 
-Auto-CRUD (`AutoRouter`) plus curated routes:
+## Events (outbox)
 
-- `GET  /api/crm/lead/kanban`     — leads grouped by stage
-- `POST /api/crm/lead/{id}/move`  — move lead to another stage; emits
-  `crm.lead.moved` and (if won/lost) `crm.lead.closed` to the Outbox
-- `GET  /api/crm/stats`            — team-level KPIs
+- `crm.lead.stage_changed`
+- `crm.lead.closed`
+- `crm.prospect.converted`
+- `crm.lead.lifecycle_changed`
 
-## AI surface
+## Lifecycle stages
 
-`ai.py` declares an `AIModuleConfig` with:
+`subscriber` → `lead` → `mql` → `sql` → `opportunity` → `customer`
 
-- `accessible_models = ["crm.person", "crm.lead", "crm.stage", "crm.team"]`
-- `callable_actions = ["crm.lead.move", "crm.lead.create", "crm.person.create"]`
-- `embed_models = ["crm.person", "crm.lead"]`
-- `suggested_prompts = ["Show pipeline for this month", "Top 5 leads by value"]`
+On prospect convert: UTM fields copy to lead; `lifecycle_stage` set to `sql`.
 
-The Admin UI dashboard embeds `<PromptInput>` and `<AIDashboard>` from
-`admin-ui/src/orbiteus-ui/` — no module-specific code on the frontend.
+## Migration
 
-## Bootstrap
-
-`bootstrap.py` seeds default stages (Open, Qualified, Proposal, Won,
-Lost) and a single Sales team on first install.
+- `g7b2c3d4e008_crm_pipedrive_extensions.py`
+- `h8d4e5f6a009_crm_lifecycle_attribution.py`

@@ -231,6 +231,41 @@ class BaseRepository(Generic[T]):
     # Domain filter (Odoo-style tuples)
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _coerce_uuid(value: Any) -> Any:
+        if isinstance(value, uuid.UUID):
+            return value
+        if isinstance(value, str):
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                return value
+        return value
+
+    def _coerce_filter_value(self, col, value: Any) -> Any:
+        """Coerce query-string values to column types (UUID/boolean from auto-CRUD)."""
+        from sqlalchemy import Boolean
+        from sqlalchemy.dialects.postgresql import UUID as PGUUID
+
+        if isinstance(col.type, PGUUID):
+            if isinstance(value, list):
+                return [self._coerce_uuid(v) for v in value]
+            return self._coerce_uuid(value)
+
+        if isinstance(col.type, Boolean):
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                lowered = value.strip().lower()
+                if lowered in ("true", "1", "yes", "on"):
+                    return True
+                if lowered in ("false", "0", "no", "off"):
+                    return False
+            if isinstance(value, int):
+                return bool(value)
+
+        return value
+
     def _apply_domain(self, stmt, domain: list[tuple[str, str, Any]]):
         """Apply Odoo-style domain filters: [("field", "=", value), ...]"""
         ops = {
@@ -251,7 +286,8 @@ class BaseRepository(Generic[T]):
                 continue
             op_fn = ops.get(operator)
             if op_fn:
-                stmt = stmt.where(op_fn(col, value))
+                coerced = self._coerce_filter_value(col, value)
+                stmt = stmt.where(op_fn(col, coerced))
         return stmt
 
     # ------------------------------------------------------------------

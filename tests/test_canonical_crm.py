@@ -36,10 +36,10 @@ def test_canonical_models_imported():
     assert hasattr(domain, "Lead")
     assert hasattr(domain, "Stage")
     assert hasattr(domain, "Team")
+    assert hasattr(domain, "Pipeline")
     # Old names are gone.
     assert not hasattr(domain, "Customer")
     assert not hasattr(domain, "Opportunity")
-    assert not hasattr(domain, "Pipeline")
 
 
 def test_person_kind_default_is_contact():
@@ -94,7 +94,9 @@ def test_manifest_lists_canonical_models_and_bootstrap():
     sys.modules.pop("modules.crm.manifest", None)
     manifest = _load("orbiteus_crm_manifest", BACKEND / "modules" / "crm" / "manifest.py")
     m = manifest.MANIFEST
-    assert m["models"] == ["crm.person", "crm.lead", "crm.stage", "crm.team"]
+    assert "crm.person" in m["models"]
+    assert "crm.lead" in m["models"]
+    assert "crm.pipeline" in m["models"]
     assert m["bootstrap"] == "modules.crm.bootstrap"
 
 

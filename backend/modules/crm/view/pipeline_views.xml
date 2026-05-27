@@ -1,0 +1,38 @@
+<views>
+
+  <!-- Pipeline list view -->
+  <view name="crm.pipeline.list" model="crm.pipeline" type="list" priority="16">
+    <list>
+      <field name="name" string="Pipeline"/>
+      <field name="sequence" string="Sequence"/>
+      <field name="is_default" string="Default"/>
+      <field name="color" string="Color"/>
+    </list>
+  </view>
+
+  <!-- Pipeline form view -->
+  <view name="crm.pipeline.form" model="crm.pipeline" type="form" priority="16">
+    <form>
+      <sheet>
+        <group string="Pipeline">
+          <field name="name" required="1" string="Name"/>
+          <field name="sequence" string="Sequence"/>
+          <field name="is_default" string="Default Pipeline"/>
+          <field name="color" string="Color"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+
+  <!-- Pipeline search view -->
+  <view name="crm.pipeline.search" model="crm.pipeline" type="search" priority="16">
+    <search>
+      <field name="name" string="Pipeline"/>
+      <filter name="default" string="Default" domain="[('is_default', '=', True)]"/>
+      <group expand="0" string="Group By">
+        <filter name="by_default" string="Default" context="{'group_by': 'is_default'}"/>
+      </group>
+    </search>
+  </view>
+
+</views>

@@ -276,16 +276,11 @@ class ModuleRegistry:
         """Auto-generate CRUD router for every model + attach custom router.
 
         Tries MVC path (controller.router) first, falls back to legacy flat path.
+        Custom router is mounted before auto-CRUD so static paths like
+        `/lead/export.csv` are not captured by `/{record_id}`.
         """
         from orbiteus_core.auto_router import build_crud_router
 
-        for model_name in desc.models:
-            router = build_crud_router(model_name)
-            if router:
-                app.include_router(router, prefix=f"/api/{model_name.replace('.', '/')}")
-                logger.info("Auto-CRUD router mounted: /api/%s", model_name.replace(".", "/"))
-
-        # Custom router – MVC: controller.router, legacy: router
         for candidate in (f"modules.{desc.name}.controller.router", f"modules.{desc.name}.router"):
             try:
                 mod = importlib.import_module(candidate)
@@ -295,7 +290,14 @@ class ModuleRegistry:
             if hasattr(mod, "router"):
                 app.include_router(mod.router, prefix=f"/api/{desc.name}")
                 logger.info("Custom router mounted: /api/%s", desc.name)
-                return
+                break
+
+        for model_name in desc.models:
+            router = build_crud_router(model_name)
+            if router:
+                app.include_router(router, prefix=f"/api/{model_name.replace('.', '/')}")
+                logger.info("Auto-CRUD router mounted: /api/%s", model_name.replace(".", "/"))
+
         if not desc.models:
             logger.warning(
                 "Module '%s' has no models and no importable custom router "

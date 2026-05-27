@@ -233,7 +233,7 @@ def build_crud_router(model_name: str) -> APIRouter | None:
     async def list_records(
         request: Request,
         offset: int = Query(0, ge=0),
-        limit: int = Query(25, ge=1, le=200),
+        limit: int = Query(25, ge=1, le=500),
         order_by: str | None = Query(None),
         order_dir: str = Query("asc", pattern="^(asc|desc)$"),
         expand: str | None = Query(

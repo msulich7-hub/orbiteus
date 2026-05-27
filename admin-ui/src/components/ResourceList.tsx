@@ -35,6 +35,8 @@ interface Props {
   createHref?: string;
   editHref?: (id: string) => string;
   pageSize?: number;
+  /** Extra query params merged into every list fetch (e.g. is_converted=false). */
+  listParams?: Record<string, unknown>;
 }
 
 type SortDir = "asc" | "desc" | null;
@@ -75,7 +77,7 @@ function useEnhancedColumns(columns: Column[], fieldMeta?: FieldMeta[]): Column[
 }
 
 export default function ResourceList({
-  title, resource, columns, fieldMeta, createHref, editHref, pageSize = 50,
+  title, resource, columns, fieldMeta, createHref, editHref, pageSize = 50, listParams,
 }: Props) {
   const displayColumns = useEnhancedColumns(columns, fieldMeta);
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
@@ -138,11 +140,12 @@ export default function ResourceList({
       params.order_dir = orderDir;
     }
     if (expandFields) params.expand = expandFields;
+    if (listParams) Object.assign(params, listParams);
     fetchList(resource, params)
       .then((d) => { setItems(d.items ?? []); setTotal(d.total ?? 0); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [resource, page, searchQuery, orderBy, orderDir, pageSize, refreshTick, expandFields]);
+  }, [resource, page, searchQuery, orderBy, orderDir, pageSize, refreshTick, expandFields, listParams]);
 
   // Realtime: when any other tab / browser mutates this list under the
   // same tenant, the SSE backplane emits `record.created/updated/deleted`

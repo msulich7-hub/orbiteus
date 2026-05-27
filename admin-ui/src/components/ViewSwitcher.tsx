@@ -3,10 +3,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { SegmentedControl, Group, Text } from "@mantine/core";
 import {
   IconList, IconLayoutKanban, IconCalendar,
-  IconChartBar, IconTable, IconActivity,
+  IconChartBar, IconTable, IconActivity, IconReportMoney,
 } from "@tabler/icons-react";
 
-export type ViewType = "list" | "kanban" | "calendar" | "graph" | "pivot" | "activities";
+export type ViewType = "list" | "kanban" | "calendar" | "graph" | "pivot" | "activities" | "forecast";
 
 const VIEW_META: Record<ViewType, { icon: React.ReactNode; label: string }> = {
   list:       { icon: <IconList size={16} />,           label: "List" },
@@ -15,6 +15,7 @@ const VIEW_META: Record<ViewType, { icon: React.ReactNode; label: string }> = {
   graph:      { icon: <IconChartBar size={16} />,       label: "Chart" },
   pivot:      { icon: <IconTable size={16} />,          label: "Pivot" },
   activities: { icon: <IconActivity size={16} />,       label: "Activities" },
+  forecast:   { icon: <IconReportMoney size={16} />,    label: "Forecast" },
 };
 
 interface Props {

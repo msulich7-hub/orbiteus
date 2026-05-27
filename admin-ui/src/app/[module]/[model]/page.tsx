@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, use, useEffect, useState } from "react";
-import { Group, Stack, Title, Loader, Center, Paper, Text } from "@mantine/core";
+import { Flex, Group, Stack, Title, Loader, Center, Paper, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { getCachedUiConfig, findModel, modelToColumns } from "@/lib/modelConfig";
 import type { ModelConfig } from "@/lib/api";
@@ -8,6 +8,13 @@ import type { ColumnDef } from "@/lib/viewParser";
 import { parseCalendarView, parseGraphView } from "@/lib/viewParser";
 import ResourceList from "@/components/ResourceList";
 import ResourceKanban from "@/components/ResourceKanban";
+import CrmDealKanban from "@/components/crm/CrmDealKanban";
+import CrmForecastView from "@/components/crm/CrmForecastView";
+import CrmQueueSidebar from "@/components/crm/CrmQueueSidebar";
+import CrmRottingDeals from "@/components/crm/CrmRottingDeals";
+import CrmTodayActivities from "@/components/crm/CrmTodayActivities";
+import CrmCsvButtons from "@/components/crm/CrmCsvButtons";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ResourceCalendar from "@/components/ResourceCalendar";
 import ResourceGraph from "@/components/ResourceGraph";
 import ViewSwitcher, { useCurrentView, type ViewType } from "@/components/ViewSwitcher";
@@ -57,25 +64,131 @@ function parseKanbanGroupField(arch: string): string {
   );
 }
 
+function CrmLeadWithQueues({
+  children,
+  queueId,
+}: {
+  children: React.ReactNode;
+  queueId: string | null;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const setQueueParam = (id: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set("queue", id);
+    } else {
+      params.delete("queue");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  return (
+    <Flex gap="md" align="flex-start" wrap="nowrap">
+      <CrmQueueSidebar initialQueueId={queueId} onQueueChange={setQueueParam} />
+      <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
+        {children}
+      </Stack>
+    </Flex>
+  );
+}
+
 function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: ModelConfig }) {
   const resource = `${mod}/${model}`;
   const title = humanizeRegistrySlugForUi(model);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const listFilter = searchParams.get("filter");
+  const viewParam = searchParams.get("view");
+  const queueId = searchParams.get("queue");
+  const isCrmLead = mod === "crm" && model === "lead";
+  const isCrmProspect = mod === "crm" && model === "prospect";
+
+  useEffect(() => {
+    if (!isCrmProspect || listFilter) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("filter", "inbox");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [isCrmProspect, listFilter, pathname, router, searchParams]);
+
+  const wrapQueues = (content: React.ReactNode) =>
+    isCrmLead ? (
+      <CrmLeadWithQueues queueId={queueId}>{content}</CrmLeadWithQueues>
+    ) : (
+      content
+    );
 
   const available: ViewType[] = ["list"];
   if (cfg.views.kanban) available.push("kanban");
+  if (isCrmLead) available.push("forecast");
   if (cfg.views.calendar && parseCalendarView(cfg.views.calendar)) available.push("calendar");
   if (cfg.views.graph && parseGraphView(cfg.views.graph)) available.push("graph");
 
-  const view = useCurrentView("list");
+  const defaultView: ViewType = cfg.views.kanban ? "kanban" : "list";
+  const view = useCurrentView(defaultView);
   const columns: ColumnDef[] = modelToColumns(cfg);
 
   const cal = cfg.views.calendar ? parseCalendarView(cfg.views.calendar) : null;
   const gr = cfg.views.graph ? parseGraphView(cfg.views.graph) : null;
 
+  if (mod === "crm" && model === "lead" && listFilter === "rotting") {
+    return (
+      <Stack gap="md">
+        <ViewHeader
+          title="Rotting deals"
+          subtitle="Deals that exceeded their stage time limit."
+        />
+        <CrmRottingDeals />
+      </Stack>
+    );
+  }
+
+  if (mod === "crm" && model === "activity" && (listFilter === "today" || viewParam === "today")) {
+    return (
+      <Stack gap="md">
+        <ViewHeader
+          title="Today's activities"
+          subtitle="Open tasks, calls and meetings due today or overdue."
+        />
+        <CrmTodayActivities />
+      </Stack>
+    );
+  }
+
+  if (view === "forecast" && isCrmLead) {
+    return wrapQueues(
+      <Stack gap="md">
+        <ViewHeader
+          title={title}
+          subtitle="Weighted revenue forecast by expected close month."
+          switcher={<ViewSwitcher available={available} current="forecast" />}
+        />
+        <CrmForecastView />
+      </Stack>,
+    );
+  }
+
   if (view === "kanban" && cfg.views.kanban) {
     const groupField = parseKanbanGroupField(cfg.views.kanban) || "stage_id";
     const groupModel = groupField.replace(/_id$/, "");
     const groupsResource = `${mod}/${groupModel}`;
+
+    if (mod === "crm" && model === "lead") {
+      return wrapQueues(
+        <Stack gap="md">
+          <ViewHeader
+            title={title}
+            subtitle="Drag and drop deals between pipeline stages."
+            switcher={<ViewSwitcher available={available} current="kanban" />}
+          />
+          <CrmDealKanban createHref={`/${mod}/${model}/new`} />
+        </Stack>,
+      );
+    }
 
     return (
       <Stack gap="md">
@@ -92,7 +205,10 @@ function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: Mod
           titleField="name"
           onMove={async (id, groupId) => {
             try {
-              if (resource === "crm/opportunity" && groupField === "stage_id") {
+              if (
+                (resource === "crm/opportunity" || resource === "crm/lead")
+                && groupField === "stage_id"
+              ) {
                 await api.post(`/${resource}/${id}/move`, {}, {
                   params: { stage_id: groupId },
                   skipGlobalErrorToast: true,
@@ -143,15 +259,31 @@ function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: Mod
     );
   }
 
-  return (
+  const prospectListParams =
+    isCrmProspect && listFilter === "inbox" ? { is_converted: false } : undefined;
+
+  if (isCrmProspect && !listFilter) {
+    return (
+      <Center h={200}>
+        <Loader color="gray" size="sm" />
+      </Center>
+    );
+  }
+
+  return wrapQueues(
     <Stack gap="md">
       {available.length > 1 && (
         <ViewHeader
           title={title}
-          subtitle="Browse, filter and manage records."
+          subtitle={
+            isCrmProspect && listFilter === "inbox"
+              ? "Unconverted prospects awaiting qualification."
+              : "Browse, filter and manage records."
+          }
           switcher={<ViewSwitcher available={available} current="list" />}
         />
       )}
+      {isCrmProspect && <CrmCsvButtons resource="prospect" />}
       <ResourceList
         title={title}
         resource={resource}
@@ -159,8 +291,9 @@ function PageContent({ mod, model, cfg }: { mod: string; model: string; cfg: Mod
         fieldMeta={cfg.fields}
         createHref={`/${mod}/${model}/new`}
         editHref={(id) => `/${mod}/${model}/${id}`}
+        listParams={prospectListParams}
       />
-    </Stack>
+    </Stack>,
   );
 }
 

@@ -50,7 +50,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${BACKEND_HOST_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://orbiteus:orbiteus@postgres:5432/orbiteus
       REDIS_URL: redis://redis:6379/0
@@ -61,6 +61,8 @@ services:
       RUN_MIGRATIONS: "1"
       USE_GUNICORN: "0"
       UVICORN_RELOAD: "1"
+      RATE_LIMIT_USER_PER_MINUTE: "600"
+      RATE_LIMIT_IP_PER_MINUTE: "600"
     volumes:
       - ./backend:/app
     depends_on:
@@ -75,13 +77,12 @@ services:
       context: .
       dockerfile: admin-ui/Dockerfile
     ports:
-      - "3000:3000"
+      - "${FRONTEND_HOST_PORT:-3000}:3000"
     environment:
       BACKEND_URL: http://backend:8000
     volumes:
       - ./admin-ui:/app/admin-ui
       - /app/admin-ui/node_modules
-      - /app/admin-ui/.next
     depends_on:
       - backend
     command: npm run dev -- --hostname 0.0.0.0
@@ -91,7 +92,7 @@ services:
       context: .
       dockerfile: portal-ui/Dockerfile
     ports:
-      - "3001:3001"
+      - "${PORTAL_HOST_PORT:-3001}:3001"
     environment:
       BACKEND_URL: http://backend:8000
     volumes:
