@@ -21,6 +21,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    entrypoint: ["celery"]
     env_file:
       - path: .env
         required: false
@@ -30,7 +31,7 @@ services:
       SECRET_KEY: change-me-in-development
       AI_SECRET_KEY: change-me-in-development
       ENVIRONMENT: development
-    command: ["celery", "-A", "celery_app", "worker", "-l", "info", "-Q", "default,outbox"]
+    command: ["-A", "celery_app", "worker", "-l", "info", "-Q", "default,outbox"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,9 +44,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    entrypoint: ["celery"]
     environment:
       REDIS_URL: redis://redis:6379/0
-    command: ["celery", "-A", "celery_app", "beat", "-l", "info"]
+    command: ["-A", "celery_app", "beat", "-l", "info"]
     depends_on:
       redis:
         condition: service_healthy
