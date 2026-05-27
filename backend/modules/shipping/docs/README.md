@@ -23,6 +23,16 @@ Read these in order when implementing or reviewing a change.
 
 Normative rules: [`ux-kiosk.md` §3](./ux-kiosk.md), [`carrier-labels.md` §4](./carrier-labels.md).
 
+## Matrix smoke (3× per spedycja)
+
+```bash
+cd backend
+python scripts/shipping_carrier_matrix_smoke.py --mock-only   # 3 MOCK
+python scripts/shipping_carrier_matrix_smoke.py --per-carrier 3  # MOCK+DPD+DSV+GEODIS if env set
+```
+
+See [`carrier-labels.md`](./carrier-labels.md) § Matrix smoke.
+
 ## Agent session prompt
 
 ```text

@@ -1,5 +1,20 @@
 # Carrier labels and waybills
 
+
+## Matrix smoke (3 shipments per carrier)
+
+Run from `backend/`:
+
+```bash
+python scripts/shipping_carrier_matrix_smoke.py --mock-only
+python scripts/shipping_carrier_matrix_smoke.py --per-carrier 3
+python scripts/shipping_carrier_matrix_smoke.py --carriers MOCK,DPD --out-dir /tmp/labels
+```
+
+Pytest: `pytest tests/test_shipping_carrier_matrix.py -q` (mocked adapter; live carriers when env set).
+
+Scenarios: **S** 5.5 kg BIS parcel, **M** 15 kg CIE parcel, **L** 120 kg BAZ pallet.
+
 > **Module:** `shipping`  
 > **Audience:** operators, integrators, AI agents implementing dispatch  
 > **Related:** [`spec.md`](./spec.md), [`docs/shipping-dpd-native.md`](../../../../docs/shipping-dpd-native.md), [`docs/shipping-schenker-dsv-native.md`](../../../../docs/shipping-schenker-dsv-native.md), [`.env.shipping.example`](../../../../.env.shipping.example)
