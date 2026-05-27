@@ -2,6 +2,9 @@
 # Uzycie: docker compose -p orbiteus -f docker-compose.yml -f docker-compose.vm-ports.yml up -d --build
 services:
   backend:
+    env_file:
+      - path: .env
+        required: false
     ports: !override
       - "8020:8000"
   frontend:
