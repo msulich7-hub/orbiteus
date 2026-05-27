@@ -14,6 +14,7 @@ import CrmQueueSidebar from "@/components/crm/CrmQueueSidebar";
 import CrmRottingDeals from "@/components/crm/CrmRottingDeals";
 import CrmTodayActivities from "@/components/crm/CrmTodayActivities";
 import CrmCsvButtons from "@/components/crm/CrmCsvButtons";
+import ShpIfsInboxPage from "@/components/shipping/ShpIfsInboxPage";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ResourceCalendar from "@/components/ResourceCalendar";
 import ResourceGraph from "@/components/ResourceGraph";
@@ -316,6 +317,14 @@ export default function DynamicListPage({ params }: { params: Promise<Params> })
       });
     return () => { cancelled = true; };
   }, [mod, model]);
+
+  if (mod === "shipping" && model === "ifs_queue") {
+    return (
+      <Suspense fallback={<Center h={200}><Loader color="gray" size="sm" /></Center>}>
+        <ShpIfsInboxPage />
+      </Suspense>
+    );
+  }
 
   if (cfg === undefined) {
     return <Center h={200}><Loader color="gray" size="sm" /></Center>;

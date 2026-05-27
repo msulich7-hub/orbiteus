@@ -33,6 +33,54 @@ access:
     role: shipping.group_shipping_user
     model: shipping.ifs_queue
     read: true
-    write: false
+    write: true
     create: false
+    delete: false
+
+  - name: shipping_manager_dispatch
+    role: shipping.group_shipping_manager
+    model: shipping.dispatch
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: shipping_user_dispatch
+    role: shipping.group_shipping_user
+    model: shipping.dispatch
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: shipping_manager_waybill
+    role: shipping.group_shipping_manager
+    model: shipping.waybill
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: shipping_user_waybill
+    role: shipping.group_shipping_user
+    model: shipping.waybill
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: shipping_manager_handling_unit
+    role: shipping.group_shipping_manager
+    model: shipping.handling_unit
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: shipping_user_handling_unit
+    role: shipping.group_shipping_user
+    model: shipping.handling_unit
+    read: true
+    write: true
+    create: true
     delete: false

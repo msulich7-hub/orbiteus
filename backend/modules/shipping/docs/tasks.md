@@ -19,7 +19,7 @@
 ### SHP-T01 — Domain and Alembic (SHP-001, SHP-002)
 
 **Depends on:** —  
-**Status:** todo
+**Status:** done
 
 **Goal:** Add `shipping.dispatch`, `shipping.waybill`, `shipping.handling_unit` dataclasses;
 extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
@@ -40,7 +40,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T02 — Repositories and workspace service (SHP-003)
 
 **Depends on:** SHP-T01  
-**Status:** todo
+**Status:** done
 
 **Goal:** `DispatchRepository`, `WaybillRepository`, `HandlingUnitRepository`;
 `start_dispatch_from_queue()`, `get_workspace()`, `assign_unit()`.
@@ -59,7 +59,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T03 — Kiosk REST router (SHP-003, partial SHP-008)
 
 **Depends on:** SHP-T02  
-**Status:** todo
+**Status:** done
 
 **Goal:** Implement inbox + workspace + assign + waybill CRUD endpoints from spec API table.
 
@@ -81,7 +81,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T04 — IFS inbox page (SHP-004, SHP-010)
 
 **Depends on:** SHP-T03  
-**Status:** todo
+**Status:** done
 
 **Goal:** CRM-style inbox: table of `queued` rows, badges, “Open kiosk” CTA.
 
@@ -100,7 +100,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T05 — Kiosk shell and stepper (SHP-005)
 
 **Depends on:** SHP-T04  
-**Status:** todo
+**Status:** done
 
 **Goal:** Full-screen kiosk layout with steps Review → Compose → Submit → Print (shell only).
 
@@ -118,7 +118,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T06 — Drag-and-drop composition (SHP-006)
 
 **Depends on:** SHP-T05  
-**Status:** todo
+**Status:** done
 
 **Goal:** Pool + up to 5 waybill columns; @dnd-kit; `PUT assign-unit` on drop.
 
@@ -136,7 +136,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T07 — Carrier tiles per waybill (SHP-007)
 
 **Depends on:** SHP-T06  
-**Status:** todo
+**Status:** done
 
 **Goal:** Per-column carrier selector; show configured/unconfigured from `/carriers/status`.
 
@@ -155,7 +155,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T08 — Outbox per waybill (SHP-008)
 
 **Depends on:** SHP-T02  
-**Status:** todo
+**Status:** done
 
 **Goal:** `POST /waybill/{id}/submit` and `submit-all`; Celery `execute_dispatch_for_waybill`.
 
@@ -173,7 +173,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T09 — Submit and Print steps (SHP-009)
 
 **Depends on:** SHP-T08, SHP-T07  
-**Status:** todo
+**Status:** done
 
 **Goal:** Step 3 Submit (batch status); Step 4 Print (PDF download / new tab).
 
@@ -193,7 +193,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T10 — Manifest, XML, actions (SHP-010)
 
 **Depends on:** SHP-T04  
-**Status:** todo
+**Status:** done
 
 **Goal:** Parity with CRM module packaging.
 
@@ -209,7 +209,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T11 — AI module config (SHP-011)
 
 **Depends on:** SHP-T08  
-**Status:** todo
+**Status:** done
 
 **Goal:** `shipping/ai.py` + register in bootstrap; handler for safe enqueue-only tools.
 
@@ -223,7 +223,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T12 — Integration tests and docs (SHP-012)
 
 **Depends on:** SHP-T09, SHP-T10  
-**Status:** todo
+**Status:** done
 
 **Goal:** Hardening + inventory update.
 
@@ -243,7 +243,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T00 — Compose preview + AUTO rules (SHP-AUTO)
 
 **Depends on:** SHP-T01 (or parallel with T02 if domain types stubbed)  
-**Status:** todo  
+**Status:** done  
 **Owner:** Backend (carrier + routing specialist)
 
 **Goal:** `GET compose-preview`, `should_auto_dispatch()`, tenant `ir_config_param` keys.
@@ -267,7 +267,7 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T13 — IFS inbox page (SHP-004)
 
 **Depends on:** SHP-T03, SHP-T00  
-**Status:** todo  
+**Status:** done  
 **Owner:** UX + frontend
 
 **Deliverables:** `ShpIfsInboxPage`, `ShpIfsInboxSidebar`, `ShpIfsInboxTable`, URL `?view=inbox`.
@@ -275,49 +275,49 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T14 — AUTO confirm strip (SHP-AUTO)
 
 **Depends on:** SHP-T13, SHP-T00  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `ShpAutoConfirmStrip` — one CTA “Wyślij 1 list przewozowy”; escape to `?kiosk=`.
 
 ### SHP-T15 — Kiosk stepper shell (SHP-005)
 
 **Depends on:** SHP-T13  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `ShpKioskComposer`, steps Review / Compose / Submit / Print (shell); `?kiosk=` param.
 
 ### SHP-T16 — DnD compose board (SHP-006)
 
 **Depends on:** SHP-T15  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `ShpHandlingUnitTile`, `ShpWaybillColumn`, @dnd-kit + TouchSensor; `PUT assign-unit`.
 
 ### SHP-T17 — Carrier chips + simulate (SHP-007)
 
 **Depends on:** SHP-T16  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `ShpCarrierChip` per column; `ShpCarrierStatusBanner`.
 
 ### SHP-T18 — Realtime inbox + progress (SHP-009)
 
 **Depends on:** SHP-T08, SHP-T15  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `useShpRealtimeIfsQueue`, `ShpDispatchProgress`, dispatch-status polling/SSE.
 
 ### SHP-T19 — Kiosk a11y + touch (SHP-005)
 
 **Depends on:** SHP-T16  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** 48px targets, keyboard shortcuts (`?` modal), `prefers-reduced-motion`.
 
 ### SHP-T20 — E2E: AUTO + 3-waybill kiosk
 
 **Depends on:** SHP-T14, SHP-T18  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** Playwright behind `E2E_FULL_SUITE`; Vitest for plan reducer.
 
@@ -330,28 +330,28 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ### SHP-T21 — `execute_dispatch_for_waybill` (SHP-008)
 
 **Depends on:** SHP-T02  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** Celery payload schema; `target_ref`=`{ifs_shipment_id}:{slot}`; idempotent drain.
 
 ### SHP-T22 — Multi-carrier parcel mapping
 
 **Depends on:** SHP-T21  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** Per-carrier `packages[]` from assigned HUs; fix `is_pallet` from full line set.
 
 ### SHP-T23 — Label PDF / `ir_attachment`
 
 **Depends on:** SHP-T21  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** `GET /waybill/{id}/label`; store base64 from DPD SOAP / DSV inline PDF.
 
 ### SHP-T24 — `dispatch-plan` batch outbox
 
 **Depends on:** SHP-T21, SHP-T03  
-**Status:** todo
+**Status:** done
 
 **Deliverables:** N outbox rows; `dispatch-status` endpoint; partial failure recovery + retry.
 
