@@ -27,17 +27,7 @@ if (Test-Path $EnvFile) {
 
 $sshTarget = if ($cfg.Alias) { $cfg.Alias } else { "$($cfg.User)@$($cfg.Host)" }
 $remoteDir = $cfg.RemoteDir
-$remoteCmd = @"
-set -e
-cd '$remoteDir'
-git remote set-url origin https://github.com/msulich7-hub/orbiteus.git 2>/dev/null || true
-git fetch origin
-git stash push -m 'vm-pre-deploy' 2>/dev/null || true
-git pull origin main
-sed -i 's/\r$//' scripts/vm-orbiteus-deploy.sh 2>/dev/null || true
-chmod +x scripts/vm-orbiteus-deploy.sh
-./scripts/vm-orbiteus-deploy.sh
-"@
+$remoteCmd = "cd $remoteDir && git remote set-url origin https://github.com/msulich7-hub/orbiteus.git && git fetch origin && git stash push -m vm-pre-deploy 2>/dev/null || true && git pull origin main && sed -i 's/\r$//' scripts/vm-orbiteus-deploy.sh && chmod +x scripts/vm-orbiteus-deploy.sh && ./scripts/vm-orbiteus-deploy.sh"
 
 Write-Host "=== Orbiteus VM deploy ===" -ForegroundColor Cyan
 Write-Host "SSH: $sshTarget -> $remoteDir"
