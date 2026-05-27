@@ -62,18 +62,28 @@ Goal: **~8/10** vs tier-1 pack station reference (not vs full WMS).
 
 Stop Track A when audit pack-station score ≥ **8** or diminishing returns.
 
-### Track B — WMS program (new modules) — **later, ADR required**
+### Track B — WMS program (module `inventory`) — **spec ready, code later**
 
-Do **not** start until product signs a WMS charter. Minimum sequence:
+**Authority:** Expert B audit — [`backend/modules/shipping/docs/wms-audit.md`](../../backend/modules/shipping/docs/wms-audit.md).
 
-| Phase | Module / artifact | Depends on |
-|-------|-------------------|------------|
-| B0 | ADR: inventory domain boundaries | This ADR |
-| B1 | `inventory.location`, `inventory.quant` | base |
-| B2 | `inventory.move`, reservations | B1 |
-| B3 | `inventory.picking` (waves, pick lists) | B2 |
-| B4 | Receiving / putaway | B1 |
-| B5 | WMS ↔ shipping handoff (shipment ready → shipping dispatch) | A2+, B3 |
+**Specification (no runtime until charter sign-off):**
+
+| Doc | Path |
+|-----|------|
+| Index | [`backend/modules/inventory/docs/README.md`](../../backend/modules/inventory/docs/README.md) |
+| Contract WMS-001..015 | [`backend/modules/inventory/docs/spec.md`](../../backend/modules/inventory/docs/spec.md) |
+| Tasks WMS-T01..T27 | [`backend/modules/inventory/docs/tasks.md`](../../backend/modules/inventory/docs/tasks.md) |
+
+Do **not** start implementation until product signs a WMS charter (or explicit waiver). Minimum sequence:
+
+| Phase | Module / artifact | Spec / task | Depends on |
+|-------|-------------------|-------------|------------|
+| B0 | Charter + boundaries | WMS-T00 | This ADR |
+| B1 | `inventory.location`, `inventory.quant` | WMS-001..003, WMS-T01..T05 | base |
+| B2 | `inventory.move`, reservations | WMS-004..005, WMS-T03, T06..T07 | B1 |
+| B3 | Pick waves + pick lists | WMS-008..009, WMS-T11..T13 | B2 |
+| B4 | Receiving / putaway | WMS-005..007, WMS-T08..T10 | B1 |
+| B5 | WMS ↔ shipping handoff | WMS-012, WMS-T15..T16, **SHP-T30** | A2+, B3 |
 
 Estimated invasiveness: **new product line**, not a shipping sprint.
 
@@ -114,7 +124,9 @@ If the customer already runs a WMS:
 
 ## References
 
-- [`backend/modules/shipping/docs/wms-audit.md`](../../backend/modules/shipping/docs/wms-audit.md) — hard scores
+- [`backend/modules/shipping/docs/wms-audit.md`](../../backend/modules/shipping/docs/wms-audit.md) — hard scores (Expert A + B)
+- [`backend/modules/inventory/docs/spec.md`](../../backend/modules/inventory/docs/spec.md) — Track B WMS contract (Expert B baseline)
+- [`backend/modules/inventory/docs/tasks.md`](../../backend/modules/inventory/docs/tasks.md) — Track B implementation tasks
 - [`backend/modules/shipping/docs/spec.md`](../../backend/modules/shipping/docs/spec.md) — module contract
 - [`backend/modules/shipping/docs/README.md`](../../backend/modules/shipping/docs/README.md) — doc index
 - [ADR-0001](./0001-engine-vs-framework.md) — engine vs product positioning

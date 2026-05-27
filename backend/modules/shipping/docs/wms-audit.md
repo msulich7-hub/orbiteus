@@ -171,6 +171,23 @@ Orbiteus — jako WMS ogółem      ██                   2,4
 
 ---
 
+## Track B — spec i taski WMS (Ekspert B)
+
+Ocena **2,4/10** jako pełny WMS jest **punktem wyjścia** do programu modułu `inventory` (nie rozszerzenia `shipping`).
+
+| Dokument | Ścieżka |
+|----------|---------|
+| Indeks modułu | [`backend/modules/inventory/docs/README.md`](../../inventory/docs/README.md) |
+| Kontrakt **WMS-001..015** | [`backend/modules/inventory/docs/spec.md`](../../inventory/docs/spec.md) |
+| Taski **WMS-T01..T27** | [`backend/modules/inventory/docs/tasks.md`](../../inventory/docs/tasks.md) |
+| ADR granice pack vs WMS | [`../../../docs/adr/0018-shipping-pack-station-not-wms.md`](../../../docs/adr/0018-shipping-pack-station-not-wms.md) |
+
+**Mapowanie audyt → spec:** każdy wiersz tabeli Eksperta B (lokalizacje, stan, przyjęcia, kompletacja, …) ma odpowiadające **WMS-00x** w `spec.md` i **WMS-Txx** w `tasks.md`.
+
+**Handoff do wysyłki:** WMS-T15 / WMS-T16 + **SHP-T30** w `shipping/docs/tasks.md` — event `inventory.ready_to_ship.created`, bez importów między modułami.
+
+---
+
 ## Rekomendacje strategiczne (obie ekspertyzy)
 
 ### Nie róbcie

@@ -368,6 +368,22 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 
 ---
 
+### SHP-T30 — WMS ready-to-ship handoff (WMS-012)
+
+**Depends on:** SHP-T02, inventory WMS-T15  
+**Status:** todo  
+**Owner:** shipping (cross-module contract)
+
+**Goal:** Subscribe to `inventory.ready_to_ship.created` (outbox); create IFS queue row or dispatch draft from payload schema `ready_to_ship/v1`. UUID FKs only — no `from modules.inventory`.
+
+**Acceptance:** Integration test with fake event; no direct read of `inventory.quant` tables.
+
+---
+
+## PR sizing guide
+
+---
+
 ## PR sizing guide
 
 | Task | Typical PR size |
