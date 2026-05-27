@@ -1,0 +1,1 @@
+"""DPD Poland adapter package."""

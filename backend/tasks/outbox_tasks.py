@@ -150,6 +150,16 @@ async def _dispatch(event: str, payload: dict, target_kind: str | None, target_r
         await deliver_webhook_async(event=event, payload=payload, webhook_id=target_ref)
         return
 
+    if target_kind == "shipping_label":
+        from tasks.shipping_tasks import dispatch_shipping_label_async
+
+        await dispatch_shipping_label_async(
+            event=event,
+            payload=payload,
+            target_ref=target_ref,
+        )
+        return
+
     # Fallback: log-only handler. Future PRs (mail, embeddings, AI) plug in here.
     logger.info(
         "outbox.dispatched",

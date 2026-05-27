@@ -391,9 +391,15 @@ def create_app() -> FastAPI:
     registry.register("base")
     registry.register("auth")
     registry.register("crm")
+    registry.register("shipping")
 
     # Bootstrap: load mappings, register routes, seed security
     registry.bootstrap(app)
+
+    # IFS webhook legacy alias (canonical: /api/shipping/ifs/webhook/shipment)
+    from modules.shipping.controller.ifs_webhook_router import router as ifs_webhook_router
+
+    app.include_router(ifs_webhook_router, prefix="/api/ifs")
 
     # Wire the outbox dispatcher onto record.* events (PR 4 / ADR-0010).
     from orbiteus_core.outbox_dispatcher import register_dispatchers

@@ -21,7 +21,7 @@ $Pairs = @(
 
 foreach ($p in $Pairs) {
     $src = Join-Path $Testorbiteka $p.Src
-    $dst = Join-Path $Orbiteus "backend" $p.Dst
+    $dst = Join-Path (Join-Path $Orbiteus "backend") $p.Dst
     if (-not (Test-Path $src)) {
         Write-Host "SKIP (brak): $src" -ForegroundColor Yellow
         continue

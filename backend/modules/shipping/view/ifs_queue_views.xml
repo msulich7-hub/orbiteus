@@ -1,0 +1,35 @@
+<views>
+
+  <view name="shipping.ifs_queue.list" model="shipping.ifs_queue" type="list" priority="16">
+    <list>
+      <field name="ifs_shipment_id" string="IFS Shipment"/>
+      <field name="ifs_sid" string="SID"/>
+      <field name="objstate" string="Objstate"/>
+      <field name="state" string="Kolejka" widget="badge"/>
+      <field name="error_message" string="Błąd"/>
+      <field name="write_date" string="Aktualizacja"/>
+    </list>
+  </view>
+
+  <view name="shipping.ifs_queue.form" model="shipping.ifs_queue" type="form" priority="16">
+    <form>
+      <header>
+        <field name="state" widget="statusbar"/>
+      </header>
+      <sheet>
+        <group string="IFS">
+          <field name="ifs_shipment_id" string="Shipment ID"/>
+          <field name="ifs_sid" string="Oracle SID"/>
+          <field name="objstate" string="Objstate"/>
+        </group>
+        <group string="Payload">
+          <field name="payload_json" string="Logistics JSON" widget="json"/>
+        </group>
+        <group string="Błąd">
+          <field name="error_message" string="Komunikat"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+
+</views>

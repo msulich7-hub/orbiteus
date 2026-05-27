@@ -30,6 +30,7 @@ app = Celery(
     include=[
         "tasks.outbox_tasks",
         "tasks.webhook_tasks",
+        "tasks.shipping_tasks",
     ],
 )
 

@@ -1,0 +1,38 @@
+groups:
+  - name: shipping.group_shipping_manager
+    label: Shipping Manager
+  - name: shipping.group_shipping_user
+    label: Shipping User
+
+access:
+  - name: shipping_manager_shipment
+    role: shipping.group_shipping_manager
+    model: shipping.shipment
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: shipping_user_shipment
+    role: shipping.group_shipping_user
+    model: shipping.shipment
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: shipping_manager_ifs_queue
+    role: shipping.group_shipping_manager
+    model: shipping.ifs_queue
+    read: true
+    write: true
+    create: false
+    delete: false
+
+  - name: shipping_user_ifs_queue
+    role: shipping.group_shipping_user
+    model: shipping.ifs_queue
+    read: true
+    write: false
+    create: false
+    delete: false

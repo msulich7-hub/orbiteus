@@ -16,3 +16,38 @@ services:
   redis:
     ports: !override
       - "6382:6379"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://orbiteus:orbiteus@postgres:5432/orbiteus
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: change-me-in-development
+      AI_SECRET_KEY: change-me-in-development
+      ENVIRONMENT: development
+    command: ["celery", "-A", "celery_app", "worker", "-l", "info", "-Q", "default,outbox"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "celery_app", "beat", "-l", "info"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
