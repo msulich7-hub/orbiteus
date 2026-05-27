@@ -1,0 +1,22 @@
+{
+  "shipment_id": 900123,
+  "contract": "BAZ^01",
+  "objstate": "Released",
+  "deliver_to_customer_no": "CUST-100",
+  "customer_address_name": "Firma Testowa Sp. z o.o.",
+  "customer_address1": "ul. Testowa 15",
+  "customer_city": "Warszawa",
+  "customer_zip_code": "02-001",
+  "customer_country": "PL",
+  "customer_phone": "+48111222333",
+  "forward_agent_id": "GEODIS",
+  "order_no": "CO-2026-001",
+  "note_text": "Test webhook",
+  "total_weight": 185.5,
+  "custom_fields": {
+    "CF$_P_A": 1,
+    "CF$_PACZKAASTD": 2,
+    "cf_tk_waga_net_sum": 185.5
+  },
+  "lines": []
+}
