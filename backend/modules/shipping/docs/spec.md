@@ -2,8 +2,18 @@
 
 > **Layer:** product  
 > **depends_on:** [base, auth] — `orders` optional FK only (UUID), no cross-module import  
-> **Status:** v0.3.0 planned — **SHP-001..012** (see [`tasks.md`](./tasks.md))  
-> **Carrier adapters:** `docs/shipping-dpd-native.md`, `docs/shipping-schenker-dsv-native.md` (repo root)
+> **Status:** v0.2.0 shipped · v0.3.0–v1.0 planned (**SHP-001..012**, [`tasks.md`](./tasks.md))  
+> **Doc index:** [`README.md`](./README.md)  
+> **Carrier adapters:** [`docs/shipping-dpd-native.md`](../../../docs/shipping-dpd-native.md), [`docs/shipping-schenker-dsv-native.md`](../../../docs/shipping-schenker-dsv-native.md)
+
+## Documentation set
+
+| Document | Scope |
+|----------|--------|
+| [`spec.md`](./spec.md) | This file — module contract |
+| [`tasks.md`](./tasks.md) | Implementation sessions |
+| [`ux-kiosk.md`](./ux-kiosk.md) | **Canonical UI/UX** — inbox, kiosk, AUTO rules, components |
+| [`carrier-labels.md`](./carrier-labels.md) | **Canonical waybills** — lifecycle, mapping, outbox, print |
 
 ## Purpose
 
@@ -18,8 +28,28 @@ dynamic renderer is insufficient) and deliver a **warehouse dispatch kiosk**:
 3. **Staged carrier flow** — per-waybill carrier choice → async API (Celery + outbox) →
    `label_created` → print/download — same outcome classes as the prior hub implementation,
    without bypassing Orbiteus RBAC or audit.
+4. **AUTO fast path** — when preview says one waybill and rules allow, operators get
+   **≤2 taps** (inbox → confirm dispatch); **kiosk** only when composition is non-trivial.
 
-Most shipments use **one** waybill; multi-waybill is required for split pallets / mixed carriers.
+Most shipments use **one** waybill (AUTO); multi-waybill uses the full kiosk (split pallets, mixed carriers).
+
+## Operating modes — AUTO vs kiosk (SHP-AUTO)
+
+Backend **`compose-preview`** is the single source of truth; the UI must not guess.
+
+| Mode | Typical triggers | UX doc |
+|------|------------------|--------|
+| `auto` | 1 HU, 1 waybill in suggested plan, carrier configured, no blocking errors | [`ux-kiosk.md` §3](./ux-kiosk.md) |
+| `kiosk` | 2–5 waybills, mixed pallet+parcel, weight over tenant max, manual override | [`ux-kiosk.md` §4](./ux-kiosk.md) |
+
+| Tenant config (`ir_config_param`) | Default | Effect |
+|-----------------------------------|---------|--------|
+| `shipping.kiosk_auto_enabled` | `1` | Allow AUTO strip on inbox |
+| `shipping.kiosk_auto_max_hu` | `1` | Max handling units for AUTO |
+| `shipping.kiosk_auto_max_weight_kg` | `31` | Above → force kiosk |
+| `shipping.kiosk_auto_confirm` | `1` | Show confirm strip vs silent `?auto=1` |
+
+Carrier eligibility, payload mapping, and outbox idempotency: [`carrier-labels.md`](./carrier-labels.md).
 
 ## Alignment with Orbiteus rules
 
@@ -172,14 +202,20 @@ One **carrier label job** (list przewozowy).
 
 ## Kiosk UX (SHP-004..009)
 
-### Route
+**Canonical wireframes, routes, components, and Polish copy:** [`ux-kiosk.md`](./ux-kiosk.md).
 
-| Path | Component | Auth |
-|------|-----------|------|
-| `/shipping/ifs-inbox` | `ShippingIfsInbox` | JWT + `shipping.ifs_queue` read |
-| `/shipping/dispatch/[id]/kiosk` | `ShippingDispatchKiosk` | JWT + `shipping.dispatch` write |
+### Routes (CRM parity — dynamic renderer)
 
-Register paths in `admin-ui` (whitelist in `proxy.ts` if needed). Menu entries in `manifest.py`.
+No dedicated `admin-ui/src/app/shipping/...` tree. Wire kiosk from
+`admin-ui/src/app/[module]/[model]/page.tsx` when `shipping` + `ifs_queue`:
+
+| URL | Screen |
+|-----|--------|
+| `/shipping/ifs_queue?view=inbox` | IFS inbox table |
+| `/shipping/ifs_queue?kiosk={ifs_shipment_id}` | Mega kiosk overlay |
+| `/shipping/ifs_queue?kiosk={id}&auto=1` | Attempt AUTO once preview loads |
+
+Components: `admin-ui/src/components/shipping/` (prefix `Shp*`). Menu entries in `manifest.py`.
 
 ### Stepper stages
 
@@ -351,7 +387,10 @@ One Alembic revision per wave:
 
 | Doc | Topic |
 |-----|--------|
+| [`README.md`](./README.md) | Documentation index |
 | [`tasks.md`](./tasks.md) | Session-sized implementation tasks |
+| [`ux-kiosk.md`](./ux-kiosk.md) | Inbox + kiosk UX, AUTO, DnD, API shapes for UI |
+| [`carrier-labels.md`](./carrier-labels.md) | Waybill lifecycle, carrier mapping, Celery payload |
 | [`../../../docs/shipping-dpd-native.md`](../../../docs/shipping-dpd-native.md) | DPD adapter |
 | [`../../../docs/shipping-schenker-dsv-native.md`](../../../docs/shipping-schenker-dsv-native.md) | DSV + IFS queue |
 | [`../../crm/docs/spec.md`](../../crm/docs/spec.md) | Module spec pattern |

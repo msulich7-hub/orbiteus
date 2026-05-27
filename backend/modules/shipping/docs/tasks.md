@@ -1,6 +1,7 @@
 # Shipping module — implementation tasks
 
-> **Spec:** [`spec.md`](./spec.md) (SHP-001..012)  
+> **Docs:** [`README.md`](./README.md) · [`spec.md`](./spec.md) · [`ux-kiosk.md`](./ux-kiosk.md) · [`carrier-labels.md`](./carrier-labels.md)  
+> **Spec IDs:** SHP-001..012  
 > **Use one task block per agent session / PR** unless noted as dependency chain.  
 > Each task must end with **tests green** + **docs/spec.md** updated if behavior changed.
 
@@ -74,6 +75,8 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ---
 
 ## Wave B — Admin UI
+
+> **Note:** UI tasks **SHP-T04..T09** are superseded by **SHP-T13..T20** (see Wave E) and **SHP-T21..T24** (Wave F). Keep IDs for history; implement T13+.
 
 ### SHP-T04 — IFS inbox page (SHP-004, SHP-010)
 
@@ -233,14 +236,135 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 
 ---
 
+---
+
+## Wave A0 — Preview & AUTO (before UI)
+
+### SHP-T00 — Compose preview + AUTO rules (SHP-AUTO)
+
+**Depends on:** SHP-T01 (or parallel with T02 if domain types stubbed)  
+**Status:** todo  
+**Owner:** Backend (carrier + routing specialist)
+
+**Goal:** `GET compose-preview`, `should_auto_dispatch()`, tenant `ir_config_param` keys.
+
+**Deliverables:**
+
+- [ ] `controller/compose_preview.py` — uses `cf_handling_units_parser`, `routing`, `carrier_settings`
+- [ ] Returns `suggested_mode`, `suggested_plan`, `blocking_errors`, `handling_units[]`
+- [ ] `PUT compose-plan` draft persistence on `shipping.dispatch` (revision)
+- [ ] Tests: 1 HU → auto; 3 HU → kiosk; unconfigured carrier → blocking
+- [ ] Document rules in [`carrier-labels.md`](./carrier-labels.md) §4
+
+**Acceptance:** Inbox can call preview without kiosk; AUTO eligible matches [`ux-kiosk.md` §3](./ux-kiosk.md).
+
+---
+
+## Wave E — UX (frontend specialist)
+
+> **Canonical UX:** [`ux-kiosk.md`](./ux-kiosk.md). CRM parity: hook `shipping` + `ifs_queue` in `[module]/[model]/page.tsx`.
+
+### SHP-T13 — IFS inbox page (SHP-004)
+
+**Depends on:** SHP-T03, SHP-T00  
+**Status:** todo  
+**Owner:** UX + frontend
+
+**Deliverables:** `ShpIfsInboxPage`, `ShpIfsInboxSidebar`, `ShpIfsInboxTable`, URL `?view=inbox`.
+
+### SHP-T14 — AUTO confirm strip (SHP-AUTO)
+
+**Depends on:** SHP-T13, SHP-T00  
+**Status:** todo
+
+**Deliverables:** `ShpAutoConfirmStrip` — one CTA “Wyślij 1 list przewozowy”; escape to `?kiosk=`.
+
+### SHP-T15 — Kiosk stepper shell (SHP-005)
+
+**Depends on:** SHP-T13  
+**Status:** todo
+
+**Deliverables:** `ShpKioskComposer`, steps Review / Compose / Submit / Print (shell); `?kiosk=` param.
+
+### SHP-T16 — DnD compose board (SHP-006)
+
+**Depends on:** SHP-T15  
+**Status:** todo
+
+**Deliverables:** `ShpHandlingUnitTile`, `ShpWaybillColumn`, @dnd-kit + TouchSensor; `PUT assign-unit`.
+
+### SHP-T17 — Carrier chips + simulate (SHP-007)
+
+**Depends on:** SHP-T16  
+**Status:** todo
+
+**Deliverables:** `ShpCarrierChip` per column; `ShpCarrierStatusBanner`.
+
+### SHP-T18 — Realtime inbox + progress (SHP-009)
+
+**Depends on:** SHP-T08, SHP-T15  
+**Status:** todo
+
+**Deliverables:** `useShpRealtimeIfsQueue`, `ShpDispatchProgress`, dispatch-status polling/SSE.
+
+### SHP-T19 — Kiosk a11y + touch (SHP-005)
+
+**Depends on:** SHP-T16  
+**Status:** todo
+
+**Deliverables:** 48px targets, keyboard shortcuts (`?` modal), `prefers-reduced-motion`.
+
+### SHP-T20 — E2E: AUTO + 3-waybill kiosk
+
+**Depends on:** SHP-T14, SHP-T18  
+**Status:** todo
+
+**Deliverables:** Playwright behind `E2E_FULL_SUITE`; Vitest for plan reducer.
+
+---
+
+## Wave F — Carrier execution (waybill specialist)
+
+> **Canonical:** [`carrier-labels.md`](./carrier-labels.md)
+
+### SHP-T21 — `execute_dispatch_for_waybill` (SHP-008)
+
+**Depends on:** SHP-T02  
+**Status:** todo
+
+**Deliverables:** Celery payload schema; `target_ref`=`{ifs_shipment_id}:{slot}`; idempotent drain.
+
+### SHP-T22 — Multi-carrier parcel mapping
+
+**Depends on:** SHP-T21  
+**Status:** todo
+
+**Deliverables:** Per-carrier `packages[]` from assigned HUs; fix `is_pallet` from full line set.
+
+### SHP-T23 — Label PDF / `ir_attachment`
+
+**Depends on:** SHP-T21  
+**Status:** todo
+
+**Deliverables:** `GET /waybill/{id}/label`; store base64 from DPD SOAP / DSV inline PDF.
+
+### SHP-T24 — `dispatch-plan` batch outbox
+
+**Depends on:** SHP-T21, SHP-T03  
+**Status:** todo
+
+**Deliverables:** N outbox rows; `dispatch-status` endpoint; partial failure recovery + retry.
+
+---
+
 ## Optional / later
 
 | ID | Topic |
 |----|--------|
-| SHP-T13 | Operator lock (`assigned_user_id`) + claim queue row |
-| SHP-T14 | Auto-split heuristic (weight > 1000 kg → 2 waybills) |
-| SHP-T15 | ZPL printer bridge (local agent) — ADR required |
-| SHP-T16 | Deprecate single `POST /dispatch` UI path |
+| SHP-T25 | Operator lock (`assigned_user_id`) + claim queue row |
+| SHP-T26 | Auto-split heuristic (weight → 2 waybills) in preview |
+| SHP-T27 | ZPL printer bridge — ADR required |
+| SHP-T28 | Deprecate legacy single `POST /dispatch` UI default |
 
 ---
 
@@ -258,10 +382,9 @@ extend `IfsShipmentQueue.state` + `dispatch_id`; Alembic migration.
 ## Suggested session order (parallel windows)
 
 ```
-Window 1: SHP-T01 → SHP-T02 → SHP-T03
-Window 2: SHP-T04 → SHP-T05 → SHP-T06 → SHP-T07  (after T03 merged)
-Window 3: SHP-T08 → SHP-T09                       (can start T08 after T02)
-Window 4: SHP-T10 → SHP-T11 → SHP-T12
+Window A (backend):  T00 → T01 → T02 → T03 → T21 → T22 → T24 → T08
+Window B (UX):       T13 → T14 → T15 → T16 → T17 → T18 → T09 → T20  (after T03+T00)
+Window C (polish):   T10 → T11 → T12 → T23
 ```
 
 ---
@@ -270,7 +393,7 @@ Window 4: SHP-T10 → SHP-T11 → SHP-T12
 
 ```text
 Implement shipping task <SHP-T0X> from backend/modules/shipping/docs/tasks.md.
-Follow backend/modules/shipping/docs/spec.md and docs/pre-prompt.md.
+Read backend/modules/shipping/docs/README.md then spec + ux-kiosk OR carrier-labels for your wave.
 Do not add cross-module imports. Carrier APIs only in Celery.
 Include tests per docs/20-testing.md. Update spec.md version table if done.
 ```
