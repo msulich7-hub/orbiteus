@@ -1,5 +1,7 @@
 # 17 — Deployment
 
+**MDM NT intranet (VM 10.10.99.60, fork msulich7-hub):** [operations/vm-mdm-nt.md](operations/vm-mdm-nt.md) — porty, deploy, shipping env, fix „Loading dashboard…”, kiosk URL.
+
 ## Two compose files
 
 | File | Purpose | Profile defaults |
