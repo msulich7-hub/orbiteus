@@ -32,6 +32,7 @@ docker compose -p orbiteus exec -T backend python -m pytest \
   tests/test_crm_scoring.py \
   tests/test_crm_forecast.py \
   tests/test_inventory_foundation.py \
+  tests/test_inventory_location_tree.py \
   -q --tb=line 2>/dev/null || true
 
 echo "=== DONE ==="

@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbiteus_core.context import RequestContext
 from orbiteus_core.db import get_session
-from orbiteus_core.exceptions import AccessDenied, NotFound
+from orbiteus_core.exceptions import AccessDenied, NotFound, ValidationError as OrbiteusValidationError
 from orbiteus_core.security.middleware import require_auth
 
 logger = logging.getLogger(__name__)
@@ -322,6 +322,8 @@ def build_crud_router(model_name: str) -> APIRouter | None:
         try:
             obj = await repo.create(body.model_dump(exclude_unset=True))
             return read_schema.model_validate(obj, from_attributes=True)
+        except OrbiteusValidationError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
         except AccessDenied as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
 
@@ -363,6 +365,8 @@ def build_crud_router(model_name: str) -> APIRouter | None:
         try:
             obj = await repo.update(record_id, body.model_dump(exclude_unset=True))
             return read_schema.model_validate(obj, from_attributes=True)
+        except OrbiteusValidationError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
         except AccessDenied as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
 

@@ -2,7 +2,7 @@
 
 > **Layer:** product  
 > **depends_on:** [base, auth]  
-> **Status:** v0.1.0 foundation shipped (**WMS-001..003** done) · **WMS-004..015** planned (see [`tasks.md`](./tasks.md))  
+> **Status:** v0.1.0 foundation + location tree (**WMS-001** tree API done) · **WMS-004..015** planned (see [`tasks.md`](./tasks.md))  
 > **Authority:** Ekspert B — [`../shipping/docs/wms-audit.md`](../shipping/docs/wms-audit.md) (tabela WMS + checklist tier-1)  
 > **Governance:** [ADR-0018](../../../docs/adr/0018-shipping-pack-station-not-wms.md)  
 > **Out of scope:** carrier labels, IFS webhook, TMS (`shipping` module)

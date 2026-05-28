@@ -44,7 +44,7 @@ One task block = one agent session / PR. Branch: `cursor/wms-<short-name>-0223`.
 ### WMS-T02 — Location tree API (WMS-001)
 
 **Depends on:** WMS-T01  
-**Status:** todo
+**Status:** done
 
 **Goal:** `GET /api/inventory/locations/tree`; barcode unique per warehouse.
 
