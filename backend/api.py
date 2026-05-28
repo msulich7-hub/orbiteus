@@ -392,6 +392,7 @@ def create_app() -> FastAPI:
     registry.register("auth")
     registry.register("crm")
     registry.register("shipping")
+    registry.register("inventory")
 
     # Bootstrap: load mappings, register routes, seed security
     registry.bootstrap(app)

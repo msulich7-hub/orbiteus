@@ -1,0 +1,1 @@
+"""Inventory (WMS) product module."""

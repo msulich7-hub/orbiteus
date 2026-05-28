@@ -1,0 +1,70 @@
+groups:
+  - name: inventory.group_inventory_manager
+    label: Inventory Manager
+  - name: inventory.group_inventory_user
+    label: Inventory User
+
+access:
+  - name: inventory_manager_warehouse
+    role: inventory.group_inventory_manager
+    model: inventory.warehouse
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: inventory_user_warehouse
+    role: inventory.group_inventory_user
+    model: inventory.warehouse
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: inventory_manager_location
+    role: inventory.group_inventory_manager
+    model: inventory.location
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: inventory_user_location
+    role: inventory.group_inventory_user
+    model: inventory.location
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: inventory_manager_product
+    role: inventory.group_inventory_manager
+    model: inventory.product
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: inventory_user_product
+    role: inventory.group_inventory_user
+    model: inventory.product
+    read: true
+    write: true
+    create: true
+    delete: false
+
+  - name: inventory_manager_quant
+    role: inventory.group_inventory_manager
+    model: inventory.quant
+    read: true
+    write: true
+    create: true
+    delete: true
+
+  - name: inventory_user_quant
+    role: inventory.group_inventory_user
+    model: inventory.quant
+    read: true
+    write: true
+    create: true
+    delete: false

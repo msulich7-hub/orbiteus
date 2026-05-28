@@ -1,0 +1,18 @@
+<views>
+  <view name="inventory.warehouse.list" model="inventory.warehouse" type="list" priority="16">
+    <list>
+      <field name="code" string="Code"/>
+      <field name="name" string="Name"/>
+    </list>
+  </view>
+  <view name="inventory.warehouse.form" model="inventory.warehouse" type="form" priority="16">
+    <form>
+      <sheet>
+        <group string="Warehouse">
+          <field name="code" required="1" string="Code"/>
+          <field name="name" required="1" string="Name"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+</views>

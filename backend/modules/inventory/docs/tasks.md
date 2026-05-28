@@ -21,7 +21,7 @@ One task block = one agent session / PR. Branch: `cursor/wms-<short-name>-0223`.
 **Deliverables:**
 
 - [x] `docs/spec.md`, `docs/tasks.md`, `docs/README.md`
-- [ ] Product sign-off recorded in ADR-0018 or issue link
+- [x] Product sign-off recorded in ADR-0018 (Track B started 2026-05-28, MDM NT)
 - [x] Update `wms-audit.md` link to this spec
 
 ---
@@ -33,7 +33,7 @@ One task block = one agent session / PR. Branch: `cursor/wms-<short-name>-0223`.
 ### WMS-T01 — Domain + migration (WMS-001..003)
 
 **Depends on:** WMS-T00  
-**Status:** todo
+**Status:** done
 
 **Goal:** `warehouse`, `location`, `product`, `quant`; Alembic; RBAC.
 
