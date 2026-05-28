@@ -6,6 +6,13 @@ were never created. Does NOT drop or alter existing tables.
 from __future__ import annotations
 
 import asyncio
+import sys
+from pathlib import Path
+
+# Ensure /app is on path when invoked as scripts/repair_missing_tables.py
+_APP_ROOT = Path(__file__).resolve().parents[1]
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
 
 from sqlalchemy import inspect
 
