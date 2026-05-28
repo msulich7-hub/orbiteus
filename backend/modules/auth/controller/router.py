@@ -423,7 +423,12 @@ async def register(
             "tenant_id": tenant.id,
             "company_id": company.id,
             "company_ids": [str(company.id)],
-            "role_ids": ["base.group_user", "crm.group_crm_manager"],
+            "role_ids": [
+                "base.group_user",
+                "crm.group_crm_manager",
+                "shipping.group_shipping_manager",
+                "inventory.group_inventory_manager",
+            ],
             "is_superadmin": False,
         })
     except IntegrityError:
