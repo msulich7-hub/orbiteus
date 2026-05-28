@@ -18,8 +18,8 @@ echo "=== CRM count before repair ==="
   "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';"
 
 echo "=== Repair missing tables ==="
-"${COMPOSE[@]}" run --rm --no-deps -e RUN_MIGRATIONS=0 backend \
-  sh -c "cd /app && python scripts/repair_missing_tables.py"
+"${COMPOSE[@]}" run --rm --no-deps --entrypoint sh backend \
+  -c "cd /app && python scripts/repair_missing_tables.py"
 
 echo "=== CRM count after repair ==="
 "${COMPOSE[@]}" exec -T postgres psql -U orbiteus -d orbiteus -tAc \
