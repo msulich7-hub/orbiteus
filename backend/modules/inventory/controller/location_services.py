@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbiteus_core.context import RequestContext
 from orbiteus_core.exceptions import NotFound, ValidationError
 
-from modules.inventory.controller.repositories import LocationRepository, WarehouseRepository
 from modules.inventory.model.domain import Location
 
 
@@ -23,6 +22,8 @@ async def assert_barcode_unique_in_warehouse(
     exclude_id: uuid.UUID | None = None,
 ) -> None:
     """Barcode must be unique per warehouse when non-empty."""
+    from modules.inventory.controller.repositories import LocationRepository
+
     normalized = (barcode or "").strip()
     if not normalized:
         return
@@ -50,6 +51,8 @@ async def assert_parent_in_warehouse(
 ) -> None:
     if parent_id is None:
         return
+    from modules.inventory.controller.repositories import LocationRepository
+
     repo = LocationRepository(session, ctx)
     try:
         parent = await repo.get(parent_id)
@@ -114,6 +117,11 @@ async def get_location_tree(
     ctx: RequestContext,
     warehouse_id: uuid.UUID,
 ) -> dict[str, Any]:
+    from modules.inventory.controller.repositories import (
+        LocationRepository,
+        WarehouseRepository,
+    )
+
     wh_repo = WarehouseRepository(session, ctx)
     await wh_repo.get(warehouse_id)
 
