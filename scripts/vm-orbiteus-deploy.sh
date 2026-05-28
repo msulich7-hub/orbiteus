@@ -15,9 +15,19 @@ docker compose -p orbiteus \
   -f docker-compose.vm-ports.yml \
   up -d --build backend frontend portal worker beat
 
-echo "=== 3) Migrations (inline on backend start; verify) ==="
+echo "=== 3) Migrations ==="
 sleep 8
-docker compose -p orbiteus exec -T backend alembic upgrade head 2>/dev/null || true
+if ! docker compose -p orbiteus exec -T backend alembic upgrade head; then
+  echo "WARN: alembic upgrade failed — if CRM lists return 500, run: ./scripts/vm-repair-alembic-crm.sh"
+  exit 1
+fi
+# Sanity: alembic at head but zero CRM tables = stamped DB; repair script required.
+CRM_COUNT="$(docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
+  "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';" | tr -d '[:space:]')"
+if [ "${CRM_COUNT:-0}" = "0" ]; then
+  echo "WARN: no crm_* tables after migrate — run ./scripts/vm-repair-alembic-crm.sh on this host"
+  exit 1
+fi
 
 echo "=== 4) Shipping + CRM + WMS unit smoke ==="
 docker compose -p orbiteus exec -T backend python -m pytest \
