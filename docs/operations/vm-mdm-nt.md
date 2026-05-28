@@ -17,6 +17,7 @@ Główny stack do pracy (CRM + shipping kiosk). Testorbiteka pozostaje równoleg
 | Portal | http://10.10.99.60:3021 |
 | OpenAPI | http://10.10.99.60:8020/api/docs |
 | **Kiosk IFS (shipping)** | http://10.10.99.60:3020/shipping/ifs_queue |
+| **WMS — magazyny / stany** | http://10.10.99.60:3020/inventory/warehouse · `/inventory/quant` |
 
 Login dev: `admin@example.com` / `admin1234`
 
