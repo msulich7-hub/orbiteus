@@ -19,7 +19,7 @@ echo "=== 3) Migrations (inline on backend start; verify) ==="
 sleep 8
 docker compose -p orbiteus exec -T backend alembic upgrade head 2>/dev/null || true
 
-echo "=== 4) Shipping + CRM unit smoke ==="
+echo "=== 4) Shipping + CRM + WMS unit smoke ==="
 docker compose -p orbiteus exec -T backend python -m pytest \
   tests/test_shipping_compose_preview.py \
   tests/test_shipping_dispatch_workspace.py \
@@ -29,6 +29,9 @@ docker compose -p orbiteus exec -T backend python -m pytest \
   tests/test_ifs_webhook_route.py \
   tests/test_ifs_cf_parser.py \
   tests/test_ifs_webhook_integration.py \
+  tests/test_crm_scoring.py \
+  tests/test_crm_forecast.py \
+  tests/test_inventory_foundation.py \
   -q --tb=line 2>/dev/null || true
 
 echo "=== DONE ==="

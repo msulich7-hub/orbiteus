@@ -1,0 +1,28 @@
+<views>
+  <view name="inventory.product.list" model="inventory.product" type="list" priority="16">
+    <list>
+      <field name="sku" string="SKU"/>
+      <field name="name" string="Name"/>
+      <field name="barcode" string="Barcode"/>
+      <field name="uom" string="UoM"/>
+      <field name="weight_kg" string="Weight (kg)"/>
+    </list>
+  </view>
+  <view name="inventory.product.form" model="inventory.product" type="form" priority="16">
+    <form>
+      <sheet>
+        <group string="Product">
+          <field name="sku" required="1" string="SKU"/>
+          <field name="name" required="1" string="Name"/>
+          <field name="barcode" string="Barcode"/>
+          <field name="uom" string="Unit"/>
+          <field name="weight_kg" string="Weight (kg)"/>
+        </group>
+        <group string="Traceability">
+          <field name="is_lot_tracked" string="Lot tracked"/>
+          <field name="is_serial_tracked" string="Serial tracked"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+</views>

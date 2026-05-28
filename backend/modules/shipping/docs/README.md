@@ -13,9 +13,10 @@ Read these in order when implementing or reviewing a change.
 | 4 | [`carrier-labels.md`](./carrier-labels.md) | Backend + ops — waybill lifecycle, carrier mapping, outbox, print |
 | 5 | [`../../../docs/shipping-dpd-native.md`](../../../docs/shipping-dpd-native.md) | DPD adapter env + SOAP |
 | 6 | [`../../../docs/shipping-schenker-dsv-native.md`](../../../docs/shipping-schenker-dsv-native.md) | DSV/Schenker + IFS queue ingress |
-| 7 | [`wms-audit.md`](./wms-audit.md) | Audyt vs tier-1 WMS (twarde oceny) |
+| 7 | [`wms-audit.md`](./wms-audit.md) | Audyt vs tier-1 WMS (twarde oceny) — **Ekspert B → Track B** |
 | 7b | [`pallet-mix-swift-composer-port.md`](./pallet-mix-swift-composer-port.md) | Mix palet — port UX z swift-ship-composer |
 | 8 | [`../../../docs/adr/0018-shipping-pack-station-not-wms.md`](../../../docs/adr/0018-shipping-pack-station-not-wms.md) | ADR: pack station vs WMS roadmap |
+| 9 | [`../inventory/docs/README.md`](../inventory/docs/README.md) | **Track B WMS** — spec WMS-001..015, tasks WMS-T01.. (Expert B baseline) |
 
 ## Operating modes (summary)
 

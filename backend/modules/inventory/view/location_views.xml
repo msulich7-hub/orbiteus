@@ -1,0 +1,32 @@
+<views>
+  <view name="inventory.location.list" model="inventory.location" type="list" priority="16">
+    <list>
+      <field name="code" string="Code"/>
+      <field name="name" string="Name"/>
+      <field name="location_type" string="Type"/>
+      <field name="warehouse_id" string="Warehouse" widget="many2one"/>
+      <field name="is_pickable" string="Pickable"/>
+      <field name="is_receivable" string="Receivable"/>
+      <field name="barcode" string="Barcode"/>
+    </list>
+  </view>
+  <view name="inventory.location.form" model="inventory.location" type="form" priority="16">
+    <form>
+      <sheet>
+        <group string="Location">
+          <field name="warehouse_id" required="1" string="Warehouse" widget="many2one"/>
+          <field name="parent_id" string="Parent" widget="many2one"/>
+          <field name="code" required="1" string="Code"/>
+          <field name="name" string="Name"/>
+          <field name="location_type" string="Type"/>
+          <field name="barcode" string="Barcode"/>
+        </group>
+        <group string="Capabilities">
+          <field name="is_pickable" string="Pickable"/>
+          <field name="is_receivable" string="Receivable"/>
+          <field name="max_weight_kg" string="Max weight (kg)"/>
+        </group>
+      </sheet>
+    </form>
+  </view>
+</views>
