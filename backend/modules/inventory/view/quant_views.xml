@@ -1,8 +1,8 @@
 <views>
   <view name="inventory.quant.list" model="inventory.quant" type="list" priority="16">
     <list>
-      <field name="product_id" string="Product" widget="many2one"/>
-      <field name="location_id" string="Location" widget="many2one"/>
+      <field name="product_id" string="Product" widget="many2one" relation="inventory.product"/>
+      <field name="location_id" string="Location" widget="many2one" relation="inventory.location"/>
       <field name="quantity" string="On hand"/>
       <field name="reserved_quantity" string="Reserved"/>
       <field name="incoming_quantity" string="Incoming"/>
@@ -12,8 +12,8 @@
     <form>
       <sheet>
         <group string="Stock">
-          <field name="product_id" required="1" string="Product" widget="many2one"/>
-          <field name="location_id" required="1" string="Location" widget="many2one"/>
+          <field name="product_id" required="1" string="Product" widget="many2one" relation="inventory.product"/>
+          <field name="location_id" required="1" string="Location" widget="many2one" relation="inventory.location"/>
           <field name="quantity" string="On hand"/>
           <field name="reserved_quantity" string="Reserved"/>
           <field name="incoming_quantity" string="Incoming"/>

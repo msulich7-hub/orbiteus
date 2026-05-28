@@ -90,6 +90,21 @@ async def test_ui_config_all_registered_models_have_fields(client):
 
 
 @pytest.mark.asyncio
+async def test_ui_config_inventory_location_parent_is_self_many2one(client):
+    """parent_id must resolve to inventory.location (Admin UI many2one)."""
+    resp = await client.get("/api/base/ui-config")
+    assert resp.status_code == 200
+    inv = next((m for m in resp.json()["modules"] if m["name"] == "inventory"), None)
+    assert inv is not None, "inventory module missing from ui-config"
+    loc = next((mo for mo in inv["models"] if mo["name"] == "inventory.location"), None)
+    assert loc is not None
+    by_name = {f["name"]: f for f in loc["fields"]}
+    assert by_name["warehouse_id"]["relation"] == "inventory.warehouse"
+    assert by_name["parent_id"]["relation"] == "inventory.location"
+    assert "lot_id" not in by_name
+
+
+@pytest.mark.asyncio
 async def test_ui_config_ir_models_hide_registry_prefix_in_labels(client):
     """Technical ``base.ir-*`` models must not surface ``Ir`` in human labels."""
     resp = await client.get("/api/base/ui-config")

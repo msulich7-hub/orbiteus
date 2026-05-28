@@ -4,7 +4,7 @@
       <field name="code" string="Code"/>
       <field name="name" string="Name"/>
       <field name="location_type" string="Type"/>
-      <field name="warehouse_id" string="Warehouse" widget="many2one"/>
+      <field name="warehouse_id" string="Warehouse" widget="many2one" relation="inventory.warehouse"/>
       <field name="is_pickable" string="Pickable"/>
       <field name="is_receivable" string="Receivable"/>
       <field name="barcode" string="Barcode"/>
@@ -14,8 +14,8 @@
     <form>
       <sheet>
         <group string="Location">
-          <field name="warehouse_id" required="1" string="Warehouse" widget="many2one"/>
-          <field name="parent_id" string="Parent" widget="many2one"/>
+          <field name="warehouse_id" required="1" string="Warehouse" widget="many2one" relation="inventory.warehouse"/>
+          <field name="parent_id" string="Parent" widget="many2one" relation="inventory.location"/>
           <field name="code" required="1" string="Code"/>
           <field name="name" string="Name"/>
           <field name="location_type" string="Type"/>

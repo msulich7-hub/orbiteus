@@ -28,7 +28,7 @@ export default function Many2OneField({
   const loadOne = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/${resource}/${id}`);
+      const { data } = await api.get(`/${resource}/${id}`, { skipGlobalErrorToast: true });
       const name = (data as { name?: string }).name ?? String(id).slice(0, 8);
       setOptions((prev) => {
         const map = new Map(prev.map((o) => [o.value, o]));
@@ -59,6 +59,7 @@ export default function Many2OneField({
       try {
         const { data } = await api.get(`/${resource}`, {
           params: { name__contains: debounced, limit: 30 },
+          skipGlobalErrorToast: true,
         });
         const items: Record<string, unknown>[] = data.items ?? data ?? [];
         const opts = items.map((row) => ({

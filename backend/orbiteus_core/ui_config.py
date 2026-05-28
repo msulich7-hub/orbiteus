@@ -105,8 +105,13 @@ def _resolve_annotation(annotation: Any) -> str | None:
 
     # datetime / date → date
     import datetime as dt
+    from decimal import Decimal
+
     if annotation in (dt.datetime, dt.date):
         return "date"
+
+    if annotation is Decimal:
+        return "number"
 
     # list[...] → skip (complex multi-value, not rendered in simple form)
     if get_origin(annotation) is list:
@@ -154,6 +159,10 @@ def _infer_fk_relation(field_name: str, parent_model: str) -> str | None:
     if field_name == "partner_id":
         return "base.partner"
     if field_name == "parent_id":
+        # Self-referential tree (e.g. inventory.location → inventory.location).
+        return parent_model
+    if field_name == "lot_id":
+        # WMS-011 not registered yet — avoid many2one pointing at missing model.
         return None
     if field_name == "user_id":
         return "base.user"
