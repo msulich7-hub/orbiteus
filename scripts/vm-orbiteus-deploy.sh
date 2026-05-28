@@ -25,8 +25,15 @@ fi
 CRM_COUNT="$(docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
   "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';" | tr -d '[:space:]')"
 if [ "${CRM_COUNT:-0}" = "0" ]; then
-  echo "WARN: no crm_* tables after migrate — run ./scripts/vm-repair-alembic-crm.sh on this host"
-  exit 1
+  echo "WARN: no crm_* tables — running repair_missing_tables.py"
+  docker compose -p orbiteus exec -T backend python scripts/repair_missing_tables.py
+  CRM_COUNT="$(docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
+    "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';" | tr -d '[:space:]')"
+  if [ "${CRM_COUNT:-0}" = "0" ]; then
+    echo "ERROR: CRM tables still missing after repair"
+    exit 1
+  fi
+  docker compose -p orbiteus restart backend worker beat
 fi
 
 echo "=== 4) Shipping + CRM + WMS unit smoke ==="
