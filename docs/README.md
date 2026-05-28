@@ -56,6 +56,7 @@ conventions, and decisions.
 | 34 | [`34-inventory-and-status.md`](./34-inventory-and-status.md) | Code vs docs honest snapshot |
 | 35 | [`35-core-definition-of-done.md`](./35-core-definition-of-done.md) | What "v1.0" means |
 | 36 | [`36-development-plan.md`](./36-development-plan.md) | Step-by-step PR plan to v1.0 |
+|    | [`crm2027/`](./crm2027/README.md) | CRM 2027 program — spec & task backlog for the best-in-class CRM on the engine |
 |    | [`adr/`](./adr/) | Architectural Decision Records |
 
 ## Conventions
