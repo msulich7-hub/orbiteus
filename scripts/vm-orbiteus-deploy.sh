@@ -26,7 +26,7 @@ CRM_COUNT="$(docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orb
   "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';" | tr -d '[:space:]')"
 if [ "${CRM_COUNT:-0}" = "0" ]; then
   echo "WARN: no crm_* tables — running repair_missing_tables.py"
-  docker compose -p orbiteus exec -T backend python scripts/repair_missing_tables.py
+  docker compose -p orbiteus exec -T backend sh -c "cd /app && python scripts/repair_missing_tables.py"
   CRM_COUNT="$(docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
     "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';" | tr -d '[:space:]')"
   if [ "${CRM_COUNT:-0}" = "0" ]; then

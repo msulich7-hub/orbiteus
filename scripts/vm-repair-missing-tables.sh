@@ -10,7 +10,7 @@ docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
   "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'crm_%';"
 
 echo "=== Create missing tables from metadata ==="
-docker compose -p orbiteus exec -T backend python scripts/repair_missing_tables.py
+docker compose -p orbiteus exec -T backend sh -c "cd /app && python scripts/repair_missing_tables.py"
 
 echo "=== CRM tables (after) ==="
 docker compose -p orbiteus exec -T postgres psql -U orbiteus -d orbiteus -tAc \
